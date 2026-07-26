@@ -122,6 +122,7 @@ export default async function ReportsPage({
               <th className="p-3">Site</th>
               <th className="p-3">Clock in</th>
               <th className="p-3">Clock out</th>
+              <th className="p-3">Break</th>
               <th className="p-3">Hours</th>
               <th className="p-3">Notes</th>
               <th className="p-3"></th>
@@ -154,6 +155,7 @@ export default async function ReportsPage({
                     </>
                   )}
                 </td>
+                <td className="p-3">{e.break_minutes > 0 ? `${e.break_minutes}m` : '—'}</td>
                 <td className="p-3">{e.hours ?? '—'}</td>
                 <td className="max-w-xs truncate p-3">{e.notes ?? ''}</td>
                 <td className="p-3">
@@ -165,7 +167,7 @@ export default async function ReportsPage({
             ))}
             {entries.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-6 text-center text-black/60">
+                <td colSpan={8} className="p-6 text-center text-black/60">
                   No entries match these filters.
                 </td>
               </tr>

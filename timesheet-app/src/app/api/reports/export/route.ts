@@ -23,13 +23,14 @@ export async function GET(request: NextRequest) {
     siteId: params.get('siteId') ?? undefined,
   })
 
-  const header = ['Crew', 'Customer', 'Site', 'Clock in', 'Clock out', 'Hours', 'Notes']
+  const header = ['Crew', 'Customer', 'Site', 'Clock in', 'Clock out', 'Break (mins)', 'Hours', 'Notes']
   const rows = entries.map((e) => [
     e.user_name,
     e.customer_name,
     e.site_name,
     new Date(e.clock_in_at).toLocaleString(),
     e.clock_out_at ? new Date(e.clock_out_at).toLocaleString() : '',
+    e.break_minutes.toString(),
     e.hours?.toString() ?? '',
     e.notes ?? '',
   ])

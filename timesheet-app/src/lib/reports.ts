@@ -14,6 +14,7 @@ export type ReportEntry = {
   customer_name: string
   clock_in_at: string
   clock_out_at: string | null
+  break_minutes: number
   hours: number | null
   notes: string | null
   clock_in_map_url: string | null
@@ -24,6 +25,7 @@ type RawRow = {
   id: string
   clock_in_at: string
   clock_out_at: string | null
+  break_minutes: number
   notes: string | null
   clock_in_lat: number | null
   clock_in_lng: number | null
@@ -47,7 +49,7 @@ export async function getReportEntries(filters: ReportFilters): Promise<ReportEn
   let query = supabase
     .from('timesheet_entries')
     .select(
-      'id, clock_in_at, clock_out_at, notes, clock_in_lat, clock_in_lng, clock_out_lat, clock_out_lng, profiles(full_name), sites(name, customers(name))'
+      'id, clock_in_at, clock_out_at, break_minutes, notes, clock_in_lat, clock_in_lng, clock_out_lat, clock_out_lng, profiles(full_name), sites(name, customers(name))'
     )
     .order('clock_in_at', { ascending: false })
 
@@ -65,6 +67,8 @@ export async function getReportEntries(filters: ReportFilters): Promise<ReportEn
     const clockIn = new Date(row.clock_in_at).getTime()
     const clockOut = row.clock_out_at ? new Date(row.clock_out_at).getTime() : null
 
+    const grossHours = clockOut ? (clockOut - clockIn) / 3600000 : null
+
     return {
       id: row.id,
       user_name: profile?.full_name ?? 'Unknown',
@@ -72,7 +76,8 @@ export async function getReportEntries(filters: ReportFilters): Promise<ReportEn
       customer_name: customer?.name ?? '',
       clock_in_at: row.clock_in_at,
       clock_out_at: row.clock_out_at,
-      hours: clockOut ? Math.round(((clockOut - clockIn) / 3600000) * 100) / 100 : null,
+      break_minutes: row.break_minutes,
+      hours: grossHours !== null ? Math.round((grossHours - row.break_minutes / 60) * 100) / 100 : null,
       notes: row.notes,
       clock_in_map_url: mapUrl(row.clock_in_lat, row.clock_in_lng),
       clock_out_map_url: mapUrl(row.clock_out_lat, row.clock_out_lng),

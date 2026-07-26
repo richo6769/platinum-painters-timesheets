@@ -26,7 +26,12 @@ export async function clockIn(input: { siteId: string } & Coords): Promise<Actio
 }
 
 export async function clockOut(
-  input: { entryId: string; notes: string } & Coords
+  input: {
+    entryId: string
+    notes: string
+    breakMinutes: number
+    clockOutAt: string
+  } & Coords
 ): Promise<ActionResult> {
   const profile = await getCurrentProfile()
   const supabase = await createClient()
@@ -34,9 +39,10 @@ export async function clockOut(
   const { error } = await supabase
     .from('timesheet_entries')
     .update({
-      clock_out_at: new Date().toISOString(),
+      clock_out_at: input.clockOutAt,
       clock_out_lat: input.lat,
       clock_out_lng: input.lng,
+      break_minutes: Math.max(0, Math.round(input.breakMinutes)),
       notes: input.notes.trim() || null,
     })
     .eq('id', input.entryId)

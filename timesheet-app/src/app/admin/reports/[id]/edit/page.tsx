@@ -22,7 +22,7 @@ export default async function EditEntryPage({
   const [{ data: entry }, { data: sites }] = await Promise.all([
     supabase
       .from('timesheet_entries')
-      .select('id, site_id, clock_in_at, clock_out_at, notes, profiles(full_name)')
+      .select('id, site_id, clock_in_at, clock_out_at, break_minutes, notes, profiles(full_name)')
       .eq('id', id)
       .single(),
     supabase.from('sites').select('id, name').order('name'),
@@ -81,6 +81,20 @@ export default async function EditEntryPage({
             name="clock_out_at"
             type="datetime-local"
             defaultValue={toLocalInputValue(entry.clock_out_at)}
+            className="w-full rounded-md border border-black/20 px-3 py-2"
+          />
+        </div>
+        <div className="space-y-1">
+          <label htmlFor="break_minutes" className="text-sm font-medium">
+            Break (minutes)
+          </label>
+          <input
+            id="break_minutes"
+            name="break_minutes"
+            type="number"
+            min={0}
+            step={1}
+            defaultValue={entry.break_minutes}
             className="w-full rounded-md border border-black/20 px-3 py-2"
           />
         </div>
