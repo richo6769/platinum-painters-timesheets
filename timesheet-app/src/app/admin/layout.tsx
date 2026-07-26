@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getCurrentProfile } from '@/lib/supabase/profile'
 import { logout } from '@/lib/actions/auth'
+import { AdminNav } from './admin-nav'
 
 export default async function AdminLayout({
   children,
@@ -18,20 +19,9 @@ export default async function AdminLayout({
   return (
     <div className="flex flex-1 flex-col">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-black/10 px-4 py-3">
-        <div className="flex flex-wrap items-center gap-4">
-          <Link href="/admin" className="shrink-0">
-            <Image src="/logo.webp" alt="Platinum Painters" width={90} height={36} priority />
-          </Link>
-          <nav className="flex flex-wrap gap-4 text-sm font-medium">
-            <Link href="/admin">Dashboard</Link>
-            <Link href="/clock">Clock In/Out</Link>
-            <Link href="/admin/customers">Customers</Link>
-            <Link href="/admin/sites">Sites</Link>
-            <Link href="/admin/staff">Staff</Link>
-            <Link href="/admin/activity">Activity</Link>
-            <Link href="/admin/reports">Reports</Link>
-          </nav>
-        </div>
+        <Link href="/admin" className="shrink-0">
+          <Image src="/logo.webp" alt="Platinum Painters" width={90} height={36} priority />
+        </Link>
         <div className="flex min-w-0 items-center gap-3">
           <span className="min-w-0 truncate text-sm text-black/60">
             {profile.full_name}
@@ -41,7 +31,10 @@ export default async function AdminLayout({
           </form>
         </div>
       </header>
-      <main className="flex-1 p-4">{children}</main>
+      <div className="flex flex-1 flex-col md:flex-row">
+        <AdminNav />
+        <main className="flex-1 p-4">{children}</main>
+      </div>
     </div>
   )
 }
