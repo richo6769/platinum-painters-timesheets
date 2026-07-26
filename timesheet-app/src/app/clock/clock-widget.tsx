@@ -3,11 +3,11 @@
 import { useEffect, useState, useTransition } from 'react'
 import { clockIn, clockOut } from '@/lib/actions/timesheet'
 
-type Job = { id: string; customer_name: string; site_address: string }
+type Site = { id: string; label: string }
 type OpenEntry = {
   id: string
   clock_in_at: string
-  job_name: string
+  site_name: string
 }
 
 function getPosition(): Promise<{ lat: number | null; lng: number | null }> {
@@ -45,13 +45,13 @@ function useElapsed(startIso: string) {
 }
 
 export function ClockWidget({
-  jobs,
+  sites,
   openEntry,
 }: {
-  jobs: Job[]
+  sites: Site[]
   openEntry: OpenEntry | null
 }) {
-  const [jobId, setJobId] = useState(jobs[0]?.id ?? '')
+  const [siteId, setSiteId] = useState(sites[0]?.id ?? '')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
   const [pending, startTransition] = useTransition()
@@ -61,7 +61,7 @@ export function ClockWidget({
     setError('')
     startTransition(async () => {
       const { lat, lng } = await getPosition()
-      const result = await clockIn({ jobId, lat, lng })
+      const result = await clockIn({ siteId, lat, lng })
       if (result?.error) setError(result.error)
     })
   }
@@ -79,7 +79,7 @@ export function ClockWidget({
   if (openEntry) {
     return (
       <div className="w-full max-w-sm space-y-4 text-center">
-        <p className="text-sm text-black/60">Clocked in — {openEntry.job_name}</p>
+        <p className="text-sm text-black/60">Clocked in — {openEntry.site_name}</p>
         <p className="text-3xl font-semibold tabular-nums">{elapsed}</p>
         <textarea
           value={notes}
@@ -102,25 +102,25 @@ export function ClockWidget({
 
   return (
     <div className="w-full max-w-sm space-y-4 text-center">
-      {jobs.length === 0 ? (
+      {sites.length === 0 ? (
         <p className="text-sm text-black/60">
-          No active jobs yet — ask your admin to add one.
+          No active sites yet — ask your admin to add one.
         </p>
       ) : (
         <>
           <div className="space-y-1 text-left">
-            <label htmlFor="job" className="text-sm font-medium">
-              Job
+            <label htmlFor="site" className="text-sm font-medium">
+              Site
             </label>
             <select
-              id="job"
-              value={jobId}
-              onChange={(e) => setJobId(e.target.value)}
+              id="site"
+              value={siteId}
+              onChange={(e) => setSiteId(e.target.value)}
               className="w-full rounded-md border border-black/20 px-3 py-2"
             >
-              {jobs.map((job) => (
-                <option key={job.id} value={job.id}>
-                  {job.customer_name} — {job.site_address}
+              {sites.map((site) => (
+                <option key={site.id} value={site.id}>
+                  {site.label}
                 </option>
               ))}
             </select>

@@ -7,13 +7,13 @@ import { getCurrentProfile } from '@/lib/supabase/profile'
 type Coords = { lat: number | null; lng: number | null }
 type ActionResult = { error?: string } | undefined
 
-export async function clockIn(input: { jobId: string } & Coords): Promise<ActionResult> {
+export async function clockIn(input: { siteId: string } & Coords): Promise<ActionResult> {
   const profile = await getCurrentProfile()
   const supabase = await createClient()
 
   const { error } = await supabase.from('timesheet_entries').insert({
     user_id: profile.id,
-    job_id: input.jobId,
+    site_id: input.siteId,
     clock_in_lat: input.lat,
     clock_in_lng: input.lng,
   })

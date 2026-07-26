@@ -20,13 +20,14 @@ export async function GET(request: NextRequest) {
     from: params.get('from') ?? undefined,
     to: params.get('to') ?? undefined,
     userId: params.get('userId') ?? undefined,
-    jobId: params.get('jobId') ?? undefined,
+    siteId: params.get('siteId') ?? undefined,
   })
 
-  const header = ['Crew', 'Job', 'Clock in', 'Clock out', 'Hours', 'Notes']
+  const header = ['Crew', 'Customer', 'Site', 'Clock in', 'Clock out', 'Hours', 'Notes']
   const rows = entries.map((e) => [
     e.user_name,
-    e.job_name,
+    e.customer_name,
+    e.site_name,
     new Date(e.clock_in_at).toLocaleString(),
     e.clock_out_at ? new Date(e.clock_out_at).toLocaleString() : '',
     e.hours?.toString() ?? '',

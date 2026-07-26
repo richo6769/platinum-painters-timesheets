@@ -19,13 +19,13 @@ export default async function EditEntryPage({
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: entry }, { data: jobs }] = await Promise.all([
+  const [{ data: entry }, { data: sites }] = await Promise.all([
     supabase
       .from('timesheet_entries')
-      .select('id, job_id, clock_in_at, clock_out_at, notes, profiles(full_name)')
+      .select('id, site_id, clock_in_at, clock_out_at, notes, profiles(full_name)')
       .eq('id', id)
       .single(),
-    supabase.from('jobs').select('id, customer_name').order('customer_name'),
+    supabase.from('sites').select('id, name').order('name'),
   ])
 
   if (!entry) {
@@ -42,19 +42,19 @@ export default async function EditEntryPage({
 
       <form action={updateEntry.bind(null, entry.id)} className="space-y-3">
         <div className="space-y-1">
-          <label htmlFor="job_id" className="text-sm font-medium">
-            Job
+          <label htmlFor="site_id" className="text-sm font-medium">
+            Site
           </label>
           <select
-            id="job_id"
-            name="job_id"
-            defaultValue={entry.job_id}
+            id="site_id"
+            name="site_id"
+            defaultValue={entry.site_id}
             required
             className="w-full rounded-md border border-black/20 px-3 py-2"
           >
-            {(jobs ?? []).map((j) => (
-              <option key={j.id} value={j.id}>
-                {j.customer_name}
+            {(sites ?? []).map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
               </option>
             ))}
           </select>

@@ -15,12 +15,12 @@ async function requireAdmin() {
 export async function updateEntry(entryId: string, formData: FormData) {
   await requireAdmin()
 
-  const jobId = formData.get('job_id')
+  const siteId = formData.get('site_id')
   const clockInLocal = formData.get('clock_in_at')
   const clockOutLocal = formData.get('clock_out_at')
   const notes = formData.get('notes')
 
-  if (typeof jobId !== 'string' || !jobId) return
+  if (typeof siteId !== 'string' || !siteId) return
   if (typeof clockInLocal !== 'string' || !clockInLocal) return
 
   const clockIn = new Date(clockInLocal)
@@ -31,7 +31,7 @@ export async function updateEntry(entryId: string, formData: FormData) {
   await supabase
     .from('timesheet_entries')
     .update({
-      job_id: jobId,
+      site_id: siteId,
       clock_in_at: clockIn.toISOString(),
       clock_out_at: clockOut ? clockOut.toISOString() : null,
       notes: typeof notes === 'string' && notes.trim() ? notes.trim() : null,
