@@ -16,17 +16,20 @@ export default async function AdminLayout({
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="flex items-center justify-between border-b border-black/10 px-4 py-3">
-        <nav className="flex gap-4 text-sm font-medium">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-black/10 px-4 py-3">
+        <nav className="flex flex-wrap gap-4 text-sm font-medium">
           <Link href="/admin">Dashboard</Link>
           <Link href="/admin/jobs">Jobs</Link>
           <Link href="/admin/reports">Reports</Link>
         </nav>
-        <form action={logout}>
-          <button className="text-sm underline">
-            Sign out ({profile.full_name})
-          </button>
-        </form>
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="min-w-0 truncate text-sm text-black/60">
+            {profile.full_name}
+          </span>
+          <form action={logout} className="shrink-0">
+            <button className="text-sm underline">Sign out</button>
+          </form>
+        </div>
       </header>
       <main className="flex-1 p-4">{children}</main>
     </div>
