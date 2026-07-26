@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 // Refreshes the Supabase auth session on every request and applies
-// role-based routing (crew -> /clock, admin -> full nav, signed out -> /login).
+// role-based routing (painter -> /clock, admin/supervisor -> full nav, signed out -> /login).
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request })
 

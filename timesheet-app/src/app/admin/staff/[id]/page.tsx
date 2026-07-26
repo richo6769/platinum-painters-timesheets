@@ -1,12 +1,15 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { updateStaff } from '@/lib/actions/staff'
+import { updateStaff, sendPasswordReset } from '@/lib/actions/staff'
+import { requireAdmin } from '@/lib/authGuards'
 
 export default async function EditStaffPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
+  await requireAdmin()
+
   const { id } = await params
   const supabase = await createClient()
   const { data: person } = await supabase
@@ -47,7 +50,8 @@ export default async function EditStaffPage({
             defaultValue={person.role}
             className="w-full rounded-md border border-black/20 px-3 py-2 sm:w-auto"
           >
-            <option value="crew">Crew</option>
+            <option value="painter">Painter</option>
+            <option value="supervisor">Supervisor</option>
             <option value="admin">Admin</option>
           </select>
         </div>
@@ -56,6 +60,12 @@ export default async function EditStaffPage({
           className="rounded-md bg-black px-4 py-2 text-sm text-white"
         >
           Save changes
+        </button>
+      </form>
+
+      <form action={sendPasswordReset.bind(null, person.id)}>
+        <button type="submit" className="text-sm underline">
+          Send password reset email
         </button>
       </form>
     </div>

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createCustomer, setCustomerActive } from '@/lib/actions/customers'
+import { getCurrentProfile } from '@/lib/supabase/profile'
 
 type Customer = {
   id: string
@@ -10,6 +11,9 @@ type Customer = {
 }
 
 export default async function CustomersPage() {
+  const profile = await getCurrentProfile()
+  const canEdit = profile.role === 'admin'
+
   const supabase = await createClient()
   const { data: customers } = await supabase
     .from('customers')
@@ -25,7 +29,11 @@ export default async function CustomersPage() {
     <div className="max-w-3xl space-y-8">
       <div>
         <h1 className="text-2xl font-semibold">Customers</h1>
-        <p className="text-sm text-black/60">Admin-only. Sites belong to a customer.</p>
+        <p className="text-sm text-black/60">
+          {canEdit
+            ? 'Admin-only. Sites belong to a customer.'
+            : 'Sites belong to a customer. Ask an admin to edit or archive one.'}
+        </p>
       </div>
 
       <form
@@ -64,9 +72,14 @@ export default async function CustomersPage() {
         </button>
       </form>
 
-      <CustomerList title="Active customers" customers={active} emptyText="No active customers yet." />
+      <CustomerList
+        title="Active customers"
+        customers={active}
+        emptyText="No active customers yet."
+        canEdit={canEdit}
+      />
       {archived.length > 0 && (
-        <CustomerList title="Archived customers" customers={archived} emptyText="" />
+        <CustomerList title="Archived customers" customers={archived} emptyText="" canEdit={canEdit} />
       )}
     </div>
   )
@@ -76,10 +89,12 @@ function CustomerList({
   title,
   customers,
   emptyText,
+  canEdit,
 }: {
   title: string
   customers: Customer[]
   emptyText: string
+  canEdit: boolean
 }) {
   return (
     <div className="space-y-3">
@@ -89,18 +104,24 @@ function CustomerList({
         {customers.map((customer) => (
           <li key={customer.id} className="flex items-center justify-between gap-4 p-3">
             <div>
-              <Link href={`/admin/customers/${customer.id}`} className="font-medium underline">
-                {customer.name}
-              </Link>
+              {canEdit ? (
+                <Link href={`/admin/customers/${customer.id}`} className="font-medium underline">
+                  {customer.name}
+                </Link>
+              ) : (
+                <p className="font-medium">{customer.name}</p>
+              )}
               {customer.contact_person && (
                 <p className="text-sm text-black/60">{customer.contact_person}</p>
               )}
             </div>
-            <form action={setCustomerActive.bind(null, customer.id, !customer.is_active)}>
-              <button type="submit" className="text-sm underline shrink-0">
-                {customer.is_active ? 'Archive' : 'Restore'}
-              </button>
-            </form>
+            {canEdit && (
+              <form action={setCustomerActive.bind(null, customer.id, !customer.is_active)}>
+                <button type="submit" className="text-sm underline shrink-0">
+                  {customer.is_active ? 'Archive' : 'Restore'}
+                </button>
+              </form>
+            )}
           </li>
         ))}
       </ul>

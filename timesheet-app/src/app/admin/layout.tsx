@@ -12,7 +12,7 @@ export default async function AdminLayout({
 }) {
   const profile = await getCurrentProfile()
 
-  if (profile.role !== 'admin') {
+  if (profile.role !== 'admin' && profile.role !== 'supervisor') {
     redirect('/clock')
   }
 
@@ -32,7 +32,7 @@ export default async function AdminLayout({
         </div>
       </header>
       <div className="flex flex-1 flex-col md:flex-row">
-        <AdminNav />
+        <AdminNav role={profile.role} />
         <main className="flex-1 p-4">{children}</main>
       </div>
     </div>

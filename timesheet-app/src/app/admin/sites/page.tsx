@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createSite, setSiteActive } from '@/lib/actions/sites'
+import { getCurrentProfile } from '@/lib/supabase/profile'
 
 type SiteRow = {
   id: string
@@ -11,6 +12,9 @@ type SiteRow = {
 }
 
 export default async function SitesPage() {
+  const profile = await getCurrentProfile()
+  const canEdit = profile.role === 'admin'
+
   const supabase = await createClient()
   const [{ data: sites }, { data: customers }] = await Promise.all([
     supabase
@@ -34,7 +38,7 @@ export default async function SitesPage() {
       <div>
         <h1 className="text-2xl font-semibold">Sites</h1>
         <p className="text-sm text-black/60">
-          Belong to a customer. Crew can only clock in against active sites.
+          Belong to a customer. Painters can only clock in against active sites.
         </p>
       </div>
 
@@ -106,8 +110,10 @@ export default async function SitesPage() {
         )}
       </form>
 
-      <SiteList title="Active sites" sites={active} emptyText="No active sites yet." />
-      {archived.length > 0 && <SiteList title="Archived sites" sites={archived} emptyText="" />}
+      <SiteList title="Active sites" sites={active} emptyText="No active sites yet." canEdit={canEdit} />
+      {archived.length > 0 && (
+        <SiteList title="Archived sites" sites={archived} emptyText="" canEdit={canEdit} />
+      )}
     </div>
   )
 }
@@ -116,10 +122,12 @@ function SiteList({
   title,
   sites,
   emptyText,
+  canEdit,
 }: {
   title: string
   sites: SiteRow[]
   emptyText: string
+  canEdit: boolean
 }) {
   return (
     <div className="space-y-3">
@@ -131,19 +139,25 @@ function SiteList({
           return (
             <li key={site.id} className="flex items-center justify-between gap-4 p-3">
               <div>
-                <Link href={`/admin/sites/${site.id}`} className="font-medium underline">
-                  {site.name}
-                </Link>
+                {canEdit ? (
+                  <Link href={`/admin/sites/${site.id}`} className="font-medium underline">
+                    {site.name}
+                  </Link>
+                ) : (
+                  <p className="font-medium">{site.name}</p>
+                )}
                 <p className="text-sm text-black/60">
                   {customer?.name ?? 'Unknown customer'}
                   {site.address ? ` — ${site.address}` : ''}
                 </p>
               </div>
-              <form action={setSiteActive.bind(null, site.id, !site.is_active)}>
-                <button type="submit" className="text-sm underline shrink-0">
-                  {site.is_active ? 'Archive' : 'Restore'}
-                </button>
-              </form>
+              {canEdit && (
+                <form action={setSiteActive.bind(null, site.id, !site.is_active)}>
+                  <button type="submit" className="text-sm underline shrink-0">
+                    {site.is_active ? 'Archive' : 'Restore'}
+                  </button>
+                </form>
+              )}
             </li>
           )
         })}

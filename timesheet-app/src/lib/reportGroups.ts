@@ -1,4 +1,7 @@
+import { createClient } from '@/lib/supabase/server'
 import { getReportEntries, type ReportEntry, type ReportFilters } from '@/lib/reports'
+
+type SupabaseClientLike = Awaited<ReturnType<typeof createClient>>
 
 export type GroupTotals = {
   grossHours: number
@@ -49,13 +52,19 @@ function groupStaffEntries(entries: ReportEntry[]): StaffGroup[] {
     .sort((a, b) => a.userName.localeCompare(b.userName))
 }
 
-export async function groupByStaff(filters: ReportFilters): Promise<StaffGroup[]> {
-  const entries = await getReportEntries(filters)
+export async function groupByStaff(
+  filters: ReportFilters,
+  client?: SupabaseClientLike
+): Promise<StaffGroup[]> {
+  const entries = await getReportEntries(filters, client)
   return groupStaffEntries(entries)
 }
 
-export async function groupBySite(filters: ReportFilters): Promise<SiteGroup[]> {
-  const entries = await getReportEntries(filters)
+export async function groupBySite(
+  filters: ReportFilters,
+  client?: SupabaseClientLike
+): Promise<SiteGroup[]> {
+  const entries = await getReportEntries(filters, client)
 
   const bySite = new Map<string, ReportEntry[]>()
   for (const entry of entries) {

@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 
+type SupabaseClientLike = Awaited<ReturnType<typeof createClient>>
+
 export type ReportFilters = {
   from?: string
   to?: string
@@ -43,8 +45,11 @@ export function mapUrl(lat: number | null, lng: number | null): string | null {
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
 }
 
-export async function getReportEntries(filters: ReportFilters): Promise<ReportEntry[]> {
-  const supabase = await createClient()
+export async function getReportEntries(
+  filters: ReportFilters,
+  client?: SupabaseClientLike
+): Promise<ReportEntry[]> {
+  const supabase = client ?? (await createClient())
 
   let query = supabase
     .from('timesheet_entries')

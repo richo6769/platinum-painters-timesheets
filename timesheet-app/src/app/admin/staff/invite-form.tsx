@@ -2,9 +2,11 @@
 
 import { useActionState } from 'react'
 import { inviteStaff } from '@/lib/actions/staff'
+import type { Role } from '@/lib/supabase/profile'
 
-export function InviteStaffForm() {
+export function InviteStaffForm({ role }: { role: Role }) {
   const [state, action, pending] = useActionState(inviteStaff, undefined)
+  const canChooseRole = role === 'admin'
 
   return (
     <form action={action} className="space-y-3 rounded-lg border border-black/10 p-4">
@@ -37,20 +39,25 @@ export function InviteStaffForm() {
           />
         </div>
       </div>
-      <div className="space-y-1">
-        <label htmlFor="role" className="text-sm font-medium">
-          Role
-        </label>
-        <select
-          id="role"
-          name="role"
-          defaultValue="crew"
-          className="w-full rounded-md border border-black/20 px-3 py-2 sm:w-auto"
-        >
-          <option value="crew">Crew</option>
-          <option value="admin">Admin</option>
-        </select>
-      </div>
+      {canChooseRole ? (
+        <div className="space-y-1">
+          <label htmlFor="role" className="text-sm font-medium">
+            Role
+          </label>
+          <select
+            id="role"
+            name="role"
+            defaultValue="painter"
+            className="w-full rounded-md border border-black/20 px-3 py-2 sm:w-auto"
+          >
+            <option value="painter">Painter</option>
+            <option value="supervisor">Supervisor</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+      ) : (
+        <p className="text-sm text-black/60">Role: Painter</p>
+      )}
       {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
       <button
         type="submit"

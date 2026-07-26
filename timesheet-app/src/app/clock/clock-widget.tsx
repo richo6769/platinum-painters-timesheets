@@ -224,7 +224,7 @@ export function ClockWidget({
     <div className="w-full max-w-sm space-y-4 text-center">
       {sites.length === 0 ? (
         <p className="text-sm text-black/60">
-          No active sites yet — ask your admin to add one.
+          No active sites yet — ask your admin or supervisor to add one.
         </p>
       ) : (
         <>

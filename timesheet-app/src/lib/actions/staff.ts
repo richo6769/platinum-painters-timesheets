@@ -4,14 +4,10 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentProfile } from '@/lib/supabase/profile'
+import { requireAdmin, requireAdminOrSupervisor } from '@/lib/authGuards'
+import type { Role } from '@/lib/supabase/profile'
 
-async function requireAdmin() {
-  const profile = await getCurrentProfile()
-  if (profile.role !== 'admin') {
-    redirect('/clock')
-  }
-}
+const VALID_ROLES: Role[] = ['admin', 'supervisor', 'painter']
 
 export type InviteStaffState = { error?: string } | undefined
 
@@ -19,11 +15,11 @@ export async function inviteStaff(
   _prevState: InviteStaffState,
   formData: FormData
 ): Promise<InviteStaffState> {
-  await requireAdmin()
+  const caller = await requireAdminOrSupervisor()
 
   const email = formData.get('email')
   const full_name = formData.get('full_name')
-  const role = formData.get('role')
+  const submittedRole = formData.get('role')
 
   if (typeof email !== 'string' || !email.trim()) {
     return { error: 'Email is required.' }
@@ -31,6 +27,15 @@ export async function inviteStaff(
   if (typeof full_name !== 'string' || !full_name.trim()) {
     return { error: 'Name is required.' }
   }
+
+  // Supervisors can only ever create Painter accounts, regardless of what
+  // the form submits.
+  const role: Role =
+    caller.role === 'supervisor'
+      ? 'painter'
+      : VALID_ROLES.includes(submittedRole as Role)
+        ? (submittedRole as Role)
+        : 'painter'
 
   const adminClient = createAdminClient()
   const { data, error } = await adminClient.auth.admin.inviteUserByEmail(email.trim(), {
@@ -41,9 +46,9 @@ export async function inviteStaff(
     return { error: error.message }
   }
 
-  if (role === 'admin' && data.user) {
+  if (role !== 'painter' && data.user) {
     const supabase = await createClient()
-    await supabase.from('profiles').update({ role: 'admin' }).eq('id', data.user.id)
+    await supabase.from('profiles').update({ role }).eq('id', data.user.id)
   }
 
   revalidatePath('/admin/staff')
@@ -54,7 +59,10 @@ export async function updateStaff(staffId: string, formData: FormData) {
   await requireAdmin()
 
   const full_name = formData.get('full_name')
-  const role = formData.get('role')
+  const submittedRole = formData.get('role')
+  const role: Role = VALID_ROLES.includes(submittedRole as Role)
+    ? (submittedRole as Role)
+    : 'painter'
 
   if (typeof full_name !== 'string' || !full_name.trim()) return
 
@@ -63,10 +71,25 @@ export async function updateStaff(staffId: string, formData: FormData) {
     .from('profiles')
     .update({
       full_name: full_name.trim(),
-      role: role === 'admin' ? 'admin' : 'crew',
+      role,
     })
     .eq('id', staffId)
 
   revalidatePath('/admin/staff')
   redirect('/admin/staff')
+}
+
+export async function sendPasswordReset(staffId: string) {
+  await requireAdmin()
+
+  const supabase = await createClient()
+  const { data: person } = await supabase
+    .from('profiles')
+    .select('email')
+    .eq('id', staffId)
+    .single()
+
+  if (!person) return
+
+  await supabase.auth.resetPasswordForEmail(person.email)
 }

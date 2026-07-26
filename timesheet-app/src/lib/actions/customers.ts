@@ -3,17 +3,10 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getCurrentProfile } from '@/lib/supabase/profile'
-
-async function requireAdmin() {
-  const profile = await getCurrentProfile()
-  if (profile.role !== 'admin') {
-    redirect('/clock')
-  }
-}
+import { requireAdmin, requireAdminOrSupervisor } from '@/lib/authGuards'
 
 export async function createCustomer(formData: FormData) {
-  await requireAdmin()
+  await requireAdminOrSupervisor()
 
   const name = formData.get('name')
   const contact_person = formData.get('contact_person')

@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { updateEntry, deleteEntry } from '@/lib/actions/entries'
+import { requireAdmin } from '@/lib/authGuards'
 
 function toLocalInputValue(iso: string | null): string {
   if (!iso) return ''
@@ -16,6 +17,8 @@ export default async function EditEntryPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  await requireAdmin()
+
   const { id } = await params
   const supabase = await createClient()
 
@@ -38,7 +41,7 @@ export default async function EditEntryPage({
   return (
     <div className="max-w-lg space-y-4">
       <h1 className="text-2xl font-semibold">Edit entry</h1>
-      <p className="text-sm text-black/60">Crew: {crewName ?? 'Unknown'}</p>
+      <p className="text-sm text-black/60">Staff: {crewName ?? 'Unknown'}</p>
 
       <form action={updateEntry.bind(null, entry.id)} className="space-y-3">
         <div className="space-y-1">

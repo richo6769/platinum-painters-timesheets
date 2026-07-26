@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Timesheets",
-  description: "Crew timesheets and job tracking",
+  description: "Staff timesheets and job tracking",
 };
 
 export default function RootLayout({

@@ -55,7 +55,7 @@ export default async function ActivityPage() {
       <div>
         <h1 className="text-2xl font-semibold">Activity</h1>
         <p className="text-sm text-black/60">
-          Crew currently clocked in. Reload the page to refresh.
+          Staff currently clocked in. Reload the page to refresh.
         </p>
       </div>
 

@@ -1,12 +1,16 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getReportEntries } from '@/lib/reports'
+import { requireAdmin } from '@/lib/authGuards'
+import { WeeklyReportPanel } from './weekly-report-panel'
 
 export default async function ReportsPage({
   searchParams,
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
+  await requireAdmin()
+
   const sp = await searchParams
   const from = typeof sp.from === 'string' ? sp.from : ''
   const to = typeof sp.to === 'string' ? sp.to : ''
@@ -14,10 +18,11 @@ export default async function ReportsPage({
   const siteId = typeof sp.siteId === 'string' ? sp.siteId : ''
 
   const supabase = await createClient()
-  const [{ data: crew }, { data: sites }, entries] = await Promise.all([
+  const [{ data: crew }, { data: sites }, entries, { data: settings }] = await Promise.all([
     supabase.from('profiles').select('id, full_name').order('full_name'),
     supabase.from('sites').select('id, name').order('name'),
     getReportEntries({ from, to, userId, siteId }),
+    supabase.from('app_settings').select('weekly_report_enabled').eq('id', true).single(),
   ])
 
   const totalHours = entries.reduce((sum, e) => sum + (e.hours ?? 0), 0)
@@ -59,6 +64,8 @@ export default async function ReportsPage({
         </div>
       </div>
 
+      <WeeklyReportPanel enabled={settings?.weekly_report_enabled ?? false} />
+
       <form className="flex flex-wrap items-end gap-3 rounded-lg border border-black/10 p-4">
         <div className="space-y-1">
           <label htmlFor="from" className="text-sm font-medium">
@@ -86,7 +93,7 @@ export default async function ReportsPage({
         </div>
         <div className="space-y-1">
           <label htmlFor="userId" className="text-sm font-medium">
-            Crew
+            Staff
           </label>
           <select
             id="userId"
@@ -94,7 +101,7 @@ export default async function ReportsPage({
             defaultValue={userId}
             className="rounded-md border border-black/20 px-3 py-2"
           >
-            <option value="">All crew</option>
+            <option value="">All staff</option>
             {(crew ?? []).map((c) => (
               <option key={c.id} value={c.id}>
                 {c.full_name}
@@ -132,7 +139,7 @@ export default async function ReportsPage({
         <table className="w-full text-left text-sm">
           <thead className="border-b border-black/10 bg-black/5">
             <tr>
-              <th className="p-3">Crew</th>
+              <th className="p-3">Staff</th>
               <th className="p-3">Site</th>
               <th className="p-3">Clock in</th>
               <th className="p-3">Clock out</th>

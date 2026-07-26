@@ -1,10 +1,12 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
+export type Role = 'admin' | 'supervisor' | 'painter'
+
 export type Profile = {
   id: string
   full_name: string
-  role: 'admin' | 'crew'
+  role: Role
 }
 
 export async function getCurrentProfile(): Promise<Profile> {

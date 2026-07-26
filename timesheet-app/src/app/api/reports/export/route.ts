@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     siteId: params.get('siteId') ?? undefined,
   })
 
-  const header = ['Crew', 'Customer', 'Site', 'Clock in', 'Clock out', 'Break (mins)', 'Hours', 'Notes']
+  const header = ['Staff', 'Customer', 'Site', 'Clock in', 'Clock out', 'Break (mins)', 'Hours', 'Notes']
   const rows = entries.map((e) => [
     e.user_name,
     e.customer_name,
