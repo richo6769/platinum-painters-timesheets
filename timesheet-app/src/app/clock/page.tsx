@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentProfile } from '@/lib/supabase/profile'
 import { logout } from '@/lib/actions/auth'
@@ -65,9 +66,16 @@ export default async function ClockPage() {
       <Image src="/logo.webp" alt="Platinum Painters" width={140} height={56} priority />
       <p className="text-sm text-black/60">Signed in as {profile.full_name}</p>
       <ClockWidget sites={sites} openEntry={openEntry} />
-      <form action={logout}>
-        <button className="text-sm underline">Sign out</button>
-      </form>
+      <div className="flex items-center gap-4">
+        {profile.role === 'admin' && (
+          <Link href="/admin" className="text-sm underline">
+            Dashboard
+          </Link>
+        )}
+        <form action={logout}>
+          <button className="text-sm underline">Sign out</button>
+        </form>
+      </div>
     </main>
   )
 }
