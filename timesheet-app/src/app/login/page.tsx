@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useActionState } from 'react'
 import { login } from '@/lib/actions/auth'
 
@@ -12,9 +13,10 @@ export default function LoginPage() {
         action={action}
         className="w-full max-w-sm space-y-4 rounded-lg border border-black/10 p-6"
       >
-        <div>
+        <div className="flex flex-col items-center gap-2 text-center">
+          <Image src="/logo.webp" alt="Platinum Painters" width={160} height={64} priority />
           <h1 className="text-xl font-semibold">Sign in</h1>
-          <p className="text-sm text-black/60">Painting Co. Timesheets</p>
+          <p className="text-sm text-black/60">Timesheets</p>
         </div>
 
         <div className="space-y-1">

@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentProfile } from '@/lib/supabase/profile'
 import { logout } from '@/lib/actions/auth'
@@ -61,6 +62,7 @@ export default async function ClockPage() {
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-6 p-4">
+      <Image src="/logo.webp" alt="Platinum Painters" width={140} height={56} priority />
       <p className="text-sm text-black/60">Signed in as {profile.full_name}</p>
       <ClockWidget sites={sites} openEntry={openEntry} />
       <form action={logout}>
