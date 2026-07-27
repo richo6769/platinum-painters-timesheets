@@ -37,7 +37,7 @@ export default async function ClockPage() {
   const profile = await getCurrentProfile()
   const supabase = await createClient()
 
-  const [{ data: siteRows }, { data: openEntryRow }] = await Promise.all([
+  const [{ data: siteRows }, { data: openEntryRow }, { data: acknowledgements }] = await Promise.all([
     supabase
       .from('sites')
       .select('id, name, extent_of_work_filename, safety_plan_filename, customers(name)')
@@ -52,13 +52,20 @@ export default async function ClockPage() {
       .eq('user_id', profile.id)
       .is('clock_out_at', null)
       .maybeSingle<OpenEntryRow>(),
+    supabase
+      .from('site_safety_acknowledgements')
+      .select('site_id')
+      .eq('user_id', profile.id),
   ])
+
+  const acknowledgedSiteIds = new Set((acknowledgements ?? []).map((a) => a.site_id as string))
 
   const sites = (siteRows ?? []).map((s) => ({
     id: s.id,
     label: customerName(s.customers) ? `${s.name} (${customerName(s.customers)})` : s.name,
     hasExtentOfWork: Boolean(s.extent_of_work_filename),
     hasSafetyPlan: Boolean(s.safety_plan_filename),
+    safetyAcknowledged: acknowledgedSiteIds.has(s.id),
   }))
 
   const openEntrySite = openEntryRow?.sites

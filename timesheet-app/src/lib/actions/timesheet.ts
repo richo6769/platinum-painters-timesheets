@@ -7,9 +7,39 @@ import { getCurrentProfile } from '@/lib/supabase/profile'
 type Coords = { lat: number | null; lng: number | null }
 type ActionResult = { error?: string } | undefined
 
-export async function clockIn(input: { siteId: string } & Coords): Promise<ActionResult> {
+export async function clockIn(
+  input: { siteId: string; safetyAcknowledged?: boolean } & Coords
+): Promise<ActionResult> {
   const profile = await getCurrentProfile()
   const supabase = await createClient()
+
+  const { data: site } = await supabase
+    .from('sites')
+    .select('safety_plan_filename')
+    .eq('id', input.siteId)
+    .single()
+
+  if (site?.safety_plan_filename) {
+    const { data: ack } = await supabase
+      .from('site_safety_acknowledgements')
+      .select('id')
+      .eq('user_id', profile.id)
+      .eq('site_id', input.siteId)
+      .maybeSingle()
+
+    if (!ack) {
+      if (!input.safetyAcknowledged) {
+        return { error: 'Please confirm you have read the Site Safety Plan before clocking in.' }
+      }
+      const { error: ackError } = await supabase.from('site_safety_acknowledgements').insert({
+        user_id: profile.id,
+        site_id: input.siteId,
+      })
+      if (ackError) {
+        return { error: ackError.message }
+      }
+    }
+  }
 
   const { error } = await supabase.from('timesheet_entries').insert({
     user_id: profile.id,
