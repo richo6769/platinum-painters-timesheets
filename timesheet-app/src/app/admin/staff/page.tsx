@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentProfile } from '@/lib/supabase/profile'
 import { InviteStaffForm } from './invite-form'
-import { setStaffActive } from '@/lib/actions/staff'
+import { setStaffActive, resendInvite } from '@/lib/actions/staff'
 import type { Role } from '@/lib/supabase/profile'
 
 type StaffRow = {
@@ -11,6 +12,7 @@ type StaffRow = {
   email: string
   role: Role
   is_active: boolean
+  pending: boolean
 }
 
 export default async function StaffPage() {
@@ -18,12 +20,16 @@ export default async function StaffPage() {
   const canEdit = profile.role === 'admin'
 
   const supabase = await createClient()
-  const { data: staff } = await supabase
-    .from('profiles')
-    .select('id, full_name, email, role, is_active')
-    .order('full_name')
+  const [{ data: staff }, { data: authUsers }] = await Promise.all([
+    supabase.from('profiles').select('id, full_name, email, role, is_active').order('full_name'),
+    createAdminClient().auth.admin.listUsers(),
+  ])
 
-  const staffList = (staff ?? []) as StaffRow[]
+  const neverSignedIn = new Set(
+    (authUsers?.users ?? []).filter((u) => !u.last_sign_in_at).map((u) => u.id)
+  )
+
+  const staffList = (staff ?? []).map((s) => ({ ...s, pending: neverSignedIn.has(s.id) })) as StaffRow[]
   const active = staffList.filter((s) => s.is_active)
   const archived = staffList.filter((s) => !s.is_active)
 
@@ -87,9 +93,19 @@ function StaffList({
                 <p className="font-medium">{person.full_name}</p>
               )}
               <p className="text-sm text-black/60">{person.email}</p>
+              {person.pending && person.is_active && (
+                <p className="text-xs text-amber-600">Invited - hasn&apos;t signed in yet</p>
+              )}
             </div>
             <div className="flex shrink-0 items-center gap-3">
               <span className="text-sm text-black/60 capitalize">{person.role}</span>
+              {person.pending && person.is_active && (
+                <form action={resendInvite.bind(null, person.id)}>
+                  <button type="submit" className="text-sm underline">
+                    Resend invite
+                  </button>
+                </form>
+              )}
               {canEdit && person.id !== currentUserId && (
                 <form action={setStaffActive.bind(null, person.id, !person.is_active)}>
                   <button type="submit" className="text-sm underline">

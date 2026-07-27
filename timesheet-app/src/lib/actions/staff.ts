@@ -94,6 +94,24 @@ export async function sendPasswordReset(staffId: string) {
   await supabase.auth.resetPasswordForEmail(person.email)
 }
 
+// A "resend" for someone who never finished setting up their account is the
+// same underlying email as a password reset - it re-sends a fresh link they
+// can use to set a password and sign in for the first time.
+export async function resendInvite(staffId: string) {
+  await requireAdminOrSupervisor()
+
+  const supabase = await createClient()
+  const { data: person } = await supabase
+    .from('profiles')
+    .select('email')
+    .eq('id', staffId)
+    .single()
+
+  if (!person) return
+
+  await supabase.auth.resetPasswordForEmail(person.email)
+}
+
 // Deactivating (rather than deleting) keeps the person's past timesheet
 // entries intact for historical reports - a hard delete would cascade and
 // wipe them. The Supabase Auth ban is what actually blocks their login;
