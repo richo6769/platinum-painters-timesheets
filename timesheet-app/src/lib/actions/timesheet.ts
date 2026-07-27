@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentProfile } from '@/lib/supabase/profile'
+import { requireAdmin } from '@/lib/authGuards'
 
 type Coords = { lat: number | null; lng: number | null }
 type ActionResult = { error?: string } | undefined
@@ -53,6 +54,41 @@ export async function clockIn(
   }
 
   revalidatePath('/clock')
+}
+
+// Admin-initiated clock in/out on behalf of a staff member who forgot -
+// no GPS (the admin isn't on site) and no safety-plan gate (that's a
+// self-confirmation only the person themselves can make).
+export async function adminClockIn(userId: string, siteId: string): Promise<ActionResult> {
+  await requireAdmin()
+  const supabase = await createClient()
+
+  const { error } = await supabase.from('timesheet_entries').insert({
+    user_id: userId,
+    site_id: siteId,
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/admin/activity')
+}
+
+export async function adminClockOut(entryId: string): Promise<ActionResult> {
+  await requireAdmin()
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('timesheet_entries')
+    .update({ clock_out_at: new Date().toISOString() })
+    .eq('id', entryId)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/admin/activity')
 }
 
 export async function clockOut(
