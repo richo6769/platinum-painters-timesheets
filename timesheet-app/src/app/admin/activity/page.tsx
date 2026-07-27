@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentProfile } from '@/lib/supabase/profile'
+import { adminClockIn, adminClockOut } from '@/lib/actions/timesheet'
 import { mapUrl } from '@/lib/reports'
 
 type CustomerRelation = { name: string } | { name: string }[] | null
@@ -9,6 +11,7 @@ type SiteRelation =
 
 type OpenEntryRow = {
   id: string
+  user_id: string
   clock_in_at: string
   clock_in_lat: number | null
   clock_in_lng: number | null
@@ -28,21 +31,34 @@ function elapsedSince(iso: string): string {
 }
 
 export default async function ActivityPage() {
+  const profile = await getCurrentProfile()
+  const canManage = profile.role === 'admin'
+
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('timesheet_entries')
-    .select('id, clock_in_at, clock_in_lat, clock_in_lng, profiles(full_name), sites(name, customers(name))')
-    .is('clock_out_at', null)
-    .order('clock_in_at', { ascending: true })
-    .returns<OpenEntryRow[]>()
+  const [{ data }, { data: staff }, { data: sites }] = await Promise.all([
+    supabase
+      .from('timesheet_entries')
+      .select(
+        'id, user_id, clock_in_at, clock_in_lat, clock_in_lng, profiles(full_name), sites(name, customers(name))'
+      )
+      .is('clock_out_at', null)
+      .order('clock_in_at', { ascending: true })
+      .returns<OpenEntryRow[]>(),
+    canManage
+      ? supabase.from('profiles').select('id, full_name').eq('is_active', true).order('full_name')
+      : Promise.resolve({ data: null }),
+    canManage
+      ? supabase.from('sites').select('id, name').eq('is_active', true).order('name')
+      : Promise.resolve({ data: null }),
+  ])
 
   const rows = (data ?? []).map((row) => {
-    const profile = first(row.profiles)
+    const profileRow = first(row.profiles)
     const site = first(row.sites)
     const customer = site ? first(site.customers) : null
     return {
       id: row.id,
-      name: profile?.full_name ?? 'Unknown',
+      name: profileRow?.full_name ?? 'Unknown',
       siteName: site?.name ?? 'Unknown',
       customerName: customer?.name ?? '',
       since: row.clock_in_at,
@@ -50,14 +66,72 @@ export default async function ActivityPage() {
     }
   })
 
+  const clockedInUserIds = new Set((data ?? []).map((row) => row.user_id))
+  const availableStaff = (staff ?? []).filter((s) => !clockedInUserIds.has(s.id))
+
   return (
-    <div className="max-w-2xl space-y-4">
+    <div className="max-w-2xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Activity</h1>
         <p className="text-sm text-black/60">
           Staff currently clocked in. Reload the page to refresh.
         </p>
       </div>
+
+      {canManage && (staff ?? []).length > 0 && (sites ?? []).length > 0 && (
+        <form
+          action={async (formData: FormData) => {
+            'use server'
+            const userId = formData.get('user_id')
+            const siteId = formData.get('site_id')
+            if (typeof userId === 'string' && userId && typeof siteId === 'string' && siteId) {
+              await adminClockIn(userId, siteId)
+            }
+          }}
+          className="space-y-3 rounded-lg border border-black/10 p-4"
+        >
+          <h2 className="font-medium">Clock in a staff member</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <label htmlFor="user_id" className="text-sm font-medium">
+                Staff member
+              </label>
+              <select
+                id="user_id"
+                name="user_id"
+                required
+                className="w-full rounded-md border border-black/20 px-3 py-2"
+              >
+                {availableStaff.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.full_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="site_id" className="text-sm font-medium">
+                Site
+              </label>
+              <select
+                id="site_id"
+                name="site_id"
+                required
+                className="w-full rounded-md border border-black/20 px-3 py-2"
+              >
+                {(sites ?? []).map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <button type="submit" className="rounded-md bg-black px-4 py-2 text-sm text-white">
+            Clock in
+          </button>
+        </form>
+      )}
 
       {rows.length === 0 ? (
         <p className="text-sm text-black/60">No one is currently clocked in.</p>
@@ -78,6 +152,18 @@ export default async function ActivityPage() {
                   <a href={row.mapUrl} target="_blank" className="underline">
                     Map
                   </a>
+                )}
+                {canManage && (
+                  <form
+                    action={async () => {
+                      'use server'
+                      await adminClockOut(row.id)
+                    }}
+                  >
+                    <button type="submit" className="text-sm underline">
+                      Clock out
+                    </button>
+                  </form>
                 )}
               </div>
             </li>

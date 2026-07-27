@@ -16,7 +16,9 @@ export default async function EditSitePage({
   const [{ data: site }, { data: customers }] = await Promise.all([
     supabase
       .from('sites')
-      .select('id, customer_id, name, address, contact_person')
+      .select(
+        'id, customer_id, name, address, contact_person, extent_of_work_filename, safety_plan_filename'
+      )
       .eq('id', id)
       .single(),
     supabase.from('customers').select('id, name').order('name'),
@@ -82,6 +84,23 @@ export default async function EditSitePage({
             className="w-full rounded-md border border-black/20 px-3 py-2"
           />
         </div>
+        <SiteDocumentField
+          kind="extent-of-work"
+          label="Extent of Work"
+          siteId={site.id}
+          currentFilename={site.extent_of_work_filename}
+          inputName="extent_of_work"
+          removeName="remove_extent_of_work"
+        />
+        <SiteDocumentField
+          kind="safety-plan"
+          label="Site Safety Plan"
+          siteId={site.id}
+          currentFilename={site.safety_plan_filename}
+          inputName="safety_plan"
+          removeName="remove_safety_plan"
+        />
+
         <button
           type="submit"
           className="rounded-md bg-black px-4 py-2 text-sm text-white"
@@ -89,6 +108,55 @@ export default async function EditSitePage({
           Save changes
         </button>
       </form>
+    </div>
+  )
+}
+
+function SiteDocumentField({
+  kind,
+  label,
+  siteId,
+  currentFilename,
+  inputName,
+  removeName,
+}: {
+  kind: 'extent-of-work' | 'safety-plan'
+  label: string
+  siteId: string
+  currentFilename: string | null
+  inputName: string
+  removeName: string
+}) {
+  return (
+    <div className="space-y-1">
+      <label htmlFor={inputName} className="text-sm font-medium">
+        {label} (PDF, optional)
+      </label>
+      {currentFilename && (
+        <div className="flex items-center justify-between gap-3 rounded-md border border-black/10 bg-black/5 px-3 py-2 text-sm">
+          <a
+            href={`/api/site-documents/${siteId}/${kind}`}
+            target="_blank"
+            className="underline"
+          >
+            {currentFilename}
+          </a>
+          <label className="flex items-center gap-1 text-xs text-black/60">
+            <input type="checkbox" name={removeName} />
+            Remove
+          </label>
+        </div>
+      )}
+      <input
+        id={inputName}
+        name={inputName}
+        type="file"
+        accept="application/pdf"
+        className="w-full rounded-md border border-black/20 px-3 py-2 text-sm"
+      />
+      {currentFilename && (
+        <p className="text-xs text-black/50">Uploading a new file replaces the current one.</p>
+      )}
     </div>
   )
 }

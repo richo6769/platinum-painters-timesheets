@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { updateStaff, sendPasswordReset } from '@/lib/actions/staff'
+import { updateStaff, sendPasswordReset, setStaffActive } from '@/lib/actions/staff'
 import { requireAdmin } from '@/lib/authGuards'
 
 export default async function EditStaffPage({
@@ -8,13 +8,13 @@ export default async function EditStaffPage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  await requireAdmin()
+  const caller = await requireAdmin()
 
   const { id } = await params
   const supabase = await createClient()
   const { data: person } = await supabase
     .from('profiles')
-    .select('id, full_name, email, role')
+    .select('id, full_name, email, role, is_active')
     .eq('id', id)
     .single()
 
@@ -68,6 +68,19 @@ export default async function EditStaffPage({
           Send password reset email
         </button>
       </form>
+
+      {person.id !== caller.id && (
+        <form action={setStaffActive.bind(null, person.id, !person.is_active)}>
+          <button type="submit" className="text-sm underline text-red-600">
+            {person.is_active ? 'Deactivate staff member' : 'Restore staff member'}
+          </button>
+        </form>
+      )}
+      {!person.is_active && (
+        <p className="text-sm text-black/60">
+          Deactivated - can no longer sign in. Their past timesheets are unaffected.
+        </p>
+      )}
     </div>
   )
 }

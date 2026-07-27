@@ -10,13 +10,23 @@ type CustomerRelation = { name: string } | { name: string }[] | null
 type SiteRow = {
   id: string
   name: string
+  extent_of_work_filename: string | null
+  safety_plan_filename: string | null
+  customers: CustomerRelation
+}
+
+type OpenEntrySite = {
+  id: string
+  name: string
+  extent_of_work_filename: string | null
+  safety_plan_filename: string | null
   customers: CustomerRelation
 }
 
 type OpenEntryRow = {
   id: string
   clock_in_at: string
-  sites: ({ name: string; customers: CustomerRelation }) | ({ name: string; customers: CustomerRelation }[]) | null
+  sites: OpenEntrySite | OpenEntrySite[] | null
 }
 
 function customerName(relation: CustomerRelation): string | undefined {
@@ -27,24 +37,35 @@ export default async function ClockPage() {
   const profile = await getCurrentProfile()
   const supabase = await createClient()
 
-  const [{ data: siteRows }, { data: openEntryRow }] = await Promise.all([
+  const [{ data: siteRows }, { data: openEntryRow }, { data: acknowledgements }] = await Promise.all([
     supabase
       .from('sites')
-      .select('id, name, customers(name)')
+      .select('id, name, extent_of_work_filename, safety_plan_filename, customers(name)')
       .eq('is_active', true)
       .order('name')
       .returns<SiteRow[]>(),
     supabase
       .from('timesheet_entries')
-      .select('id, clock_in_at, sites(name, customers(name))')
+      .select(
+        'id, clock_in_at, sites(id, name, extent_of_work_filename, safety_plan_filename, customers(name))'
+      )
       .eq('user_id', profile.id)
       .is('clock_out_at', null)
       .maybeSingle<OpenEntryRow>(),
+    supabase
+      .from('site_safety_acknowledgements')
+      .select('site_id')
+      .eq('user_id', profile.id),
   ])
+
+  const acknowledgedSiteIds = new Set((acknowledgements ?? []).map((a) => a.site_id as string))
 
   const sites = (siteRows ?? []).map((s) => ({
     id: s.id,
     label: customerName(s.customers) ? `${s.name} (${customerName(s.customers)})` : s.name,
+    hasExtentOfWork: Boolean(s.extent_of_work_filename),
+    hasSafetyPlan: Boolean(s.safety_plan_filename),
+    safetyAcknowledged: acknowledgedSiteIds.has(s.id),
   }))
 
   const openEntrySite = openEntryRow?.sites
@@ -57,7 +78,10 @@ export default async function ClockPage() {
     ? {
         id: openEntryRow.id,
         clock_in_at: openEntryRow.clock_in_at,
+        site_id: openEntrySite?.id ?? null,
         site_name: openEntrySite?.name ?? 'Site',
+        hasExtentOfWork: Boolean(openEntrySite?.extent_of_work_filename),
+        hasSafetyPlan: Boolean(openEntrySite?.safety_plan_filename),
       }
     : null
 
