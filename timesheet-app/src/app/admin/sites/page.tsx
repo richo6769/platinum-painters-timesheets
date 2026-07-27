@@ -8,6 +8,8 @@ type SiteRow = {
   name: string
   address: string | null
   is_active: boolean
+  extent_of_work_filename: string | null
+  safety_plan_filename: string | null
   customers: { name: string } | { name: string }[] | null
 }
 
@@ -19,7 +21,9 @@ export default async function SitesPage() {
   const [{ data: sites }, { data: customers }] = await Promise.all([
     supabase
       .from('sites')
-      .select('id, name, address, is_active, customers(name)')
+      .select(
+        'id, name, address, is_active, extent_of_work_filename, safety_plan_filename, customers(name)'
+      )
       .order('is_active', { ascending: false })
       .order('name', { ascending: true }),
     supabase
@@ -100,6 +104,32 @@ export default async function SitesPage() {
                 className="w-full rounded-md border border-black/20 px-3 py-2"
               />
             </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <label htmlFor="extent_of_work" className="text-sm font-medium">
+                  Extent of Work (PDF, optional)
+                </label>
+                <input
+                  id="extent_of_work"
+                  name="extent_of_work"
+                  type="file"
+                  accept="application/pdf"
+                  className="w-full rounded-md border border-black/20 px-3 py-2 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label htmlFor="safety_plan" className="text-sm font-medium">
+                  Site Safety Plan (PDF, optional)
+                </label>
+                <input
+                  id="safety_plan"
+                  name="safety_plan"
+                  type="file"
+                  accept="application/pdf"
+                  className="w-full rounded-md border border-black/20 px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
             <button
               type="submit"
               className="rounded-md bg-black px-4 py-2 text-sm text-white"
@@ -150,6 +180,28 @@ function SiteList({
                   {customer?.name ?? 'Unknown customer'}
                   {site.address ? ` — ${site.address}` : ''}
                 </p>
+                {(site.extent_of_work_filename || site.safety_plan_filename) && (
+                  <p className="mt-1 flex gap-2 text-xs">
+                    {site.extent_of_work_filename && (
+                      <a
+                        href={`/api/site-documents/${site.id}/extent-of-work`}
+                        target="_blank"
+                        className="rounded bg-black/5 px-2 py-0.5 underline"
+                      >
+                        Extent of Work
+                      </a>
+                    )}
+                    {site.safety_plan_filename && (
+                      <a
+                        href={`/api/site-documents/${site.id}/safety-plan`}
+                        target="_blank"
+                        className="rounded bg-black/5 px-2 py-0.5 underline"
+                      >
+                        Safety Plan
+                      </a>
+                    )}
+                  </p>
+                )}
               </div>
               {canEdit && (
                 <form action={setSiteActive.bind(null, site.id, !site.is_active)}>

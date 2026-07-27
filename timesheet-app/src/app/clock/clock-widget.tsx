@@ -3,11 +3,14 @@
 import { useEffect, useState, useTransition } from 'react'
 import { clockIn, clockOut } from '@/lib/actions/timesheet'
 
-type Site = { id: string; label: string }
+type Site = { id: string; label: string; hasExtentOfWork: boolean; hasSafetyPlan: boolean }
 type OpenEntry = {
   id: string
   clock_in_at: string
+  site_id: string | null
   site_name: string
+  hasExtentOfWork: boolean
+  hasSafetyPlan: boolean
 }
 type Coords = { lat: number | null; lng: number | null }
 
@@ -69,6 +72,7 @@ export function ClockWidget({
   openEntry: OpenEntry | null
 }) {
   const [siteId, setSiteId] = useState(sites[0]?.id ?? '')
+  const selectedSite = sites.find((s) => s.id === siteId) ?? null
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
   const [pending, startTransition] = useTransition()
@@ -133,6 +137,29 @@ export function ClockWidget({
     return (
       <div className="w-full max-w-sm space-y-4">
         <p className="text-center text-sm text-black/60">{openEntry.site_name}</p>
+
+        {openEntry.site_id && (openEntry.hasExtentOfWork || openEntry.hasSafetyPlan) && (
+          <div className="flex gap-2">
+            {openEntry.hasExtentOfWork && (
+              <a
+                href={`/api/site-documents/${openEntry.site_id}/extent-of-work`}
+                target="_blank"
+                className="flex-1 rounded-md border border-black/20 px-3 py-2 text-center text-sm font-medium hover:bg-black/5"
+              >
+                Extent of Work
+              </a>
+            )}
+            {openEntry.hasSafetyPlan && (
+              <a
+                href={`/api/site-documents/${openEntry.site_id}/safety-plan`}
+                target="_blank"
+                className="flex-1 rounded-md border border-black/20 px-3 py-2 text-center text-sm font-medium hover:bg-black/5"
+              >
+                Safety Plan
+              </a>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4 rounded-lg border border-black/10 p-4 text-center">
           <div>
@@ -245,6 +272,28 @@ export function ClockWidget({
               ))}
             </select>
           </div>
+          {selectedSite && (selectedSite.hasExtentOfWork || selectedSite.hasSafetyPlan) && (
+            <div className="flex gap-2">
+              {selectedSite.hasExtentOfWork && (
+                <a
+                  href={`/api/site-documents/${selectedSite.id}/extent-of-work`}
+                  target="_blank"
+                  className="flex-1 rounded-md border border-black/20 px-3 py-2 text-sm font-medium hover:bg-black/5"
+                >
+                  Extent of Work
+                </a>
+              )}
+              {selectedSite.hasSafetyPlan && (
+                <a
+                  href={`/api/site-documents/${selectedSite.id}/safety-plan`}
+                  target="_blank"
+                  className="flex-1 rounded-md border border-black/20 px-3 py-2 text-sm font-medium hover:bg-black/5"
+                >
+                  Safety Plan
+                </a>
+              )}
+            </div>
+          )}
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button
             onClick={handleClockIn}
