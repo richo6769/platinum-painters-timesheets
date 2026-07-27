@@ -154,7 +154,12 @@ export default async function ActivityPage() {
                   </a>
                 )}
                 {canManage && (
-                  <form action={adminClockOut.bind(null, row.id)}>
+                  <form
+                    action={async () => {
+                      'use server'
+                      await adminClockOut(row.id)
+                    }}
+                  >
                     <button type="submit" className="text-sm underline">
                       Clock out
                     </button>
