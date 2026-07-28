@@ -18,30 +18,34 @@ export default async function AdminDashboard() {
           {count ?? 0} staff currently clocked in
         </Link>
       </p>
-      <ul className="list-inside list-disc space-y-1">
-        <li>
-          <Link href="/admin/customers" className="underline">
-            Manage customers
-          </Link>
-        </li>
-        <li>
-          <Link href="/admin/sites" className="underline">
-            Manage sites
-          </Link>
-        </li>
-        <li>
-          <Link href="/admin/staff" className="underline">
-            Manage staff
-          </Link>
-        </li>
+      <div className="flex flex-wrap gap-2">
+        <Link
+          href="/admin/customers"
+          className="rounded-lg bg-gray-300 px-4 py-2 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-400"
+        >
+          Manage customers
+        </Link>
+        <Link
+          href="/admin/sites"
+          className="rounded-lg bg-gray-300 px-4 py-2 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-400"
+        >
+          Manage sites
+        </Link>
+        <Link
+          href="/admin/staff"
+          className="rounded-lg bg-gray-300 px-4 py-2 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-400"
+        >
+          Manage staff
+        </Link>
         {profile.role === 'admin' && (
-          <li>
-            <Link href="/admin/reports" className="underline">
-              Timesheet reports
-            </Link>
-          </li>
+          <Link
+            href="/admin/reports"
+            className="rounded-lg bg-gray-300 px-4 py-2 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-400"
+          >
+            Timesheet reports
+          </Link>
         )}
-      </ul>
+      </div>
     </div>
   )
 }
