@@ -57,3 +57,21 @@ export async function setCustomerActive(customerId: string, isActive: boolean) {
 
   revalidatePath('/admin/customers')
 }
+
+// Only for customers with zero sites - one with sites would fail on the
+// foreign key anyway, but checking first avoids relying on that for UX.
+export async function deleteCustomer(customerId: string) {
+  await requireAdmin()
+
+  const supabase = await createClient()
+  const { count } = await supabase
+    .from('sites')
+    .select('id', { count: 'exact', head: true })
+    .eq('customer_id', customerId)
+
+  if ((count ?? 0) > 0) return
+
+  await supabase.from('customers').delete().eq('id', customerId)
+
+  revalidatePath('/admin/customers')
+}

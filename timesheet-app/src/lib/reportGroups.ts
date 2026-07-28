@@ -60,6 +60,76 @@ export async function groupByStaff(
   return groupStaffEntries(entries)
 }
 
+export type DayStaffTotal = {
+  date: string
+  userName: string
+  hours: number
+}
+
+export type DaySiteTotal = {
+  date: string
+  siteName: string
+  hours: number
+}
+
+function dateKey(iso: string): string {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function groupByDay<T extends { date: string; hours: number }>(
+  entries: ReportEntry[],
+  labelOf: (e: ReportEntry) => string,
+  makeRow: (date: string, label: string, hours: number) => T,
+  labelKey: keyof T
+): T[] {
+  const byKey = new Map<string, T>()
+  for (const entry of entries) {
+    if (entry.hours === null) continue
+    const date = dateKey(entry.clock_in_at)
+    const label = labelOf(entry)
+    const key = `${date}__${label}`
+    const existing = byKey.get(key)
+    if (existing) {
+      existing.hours = round2(existing.hours + entry.hours)
+    } else {
+      byKey.set(key, makeRow(date, label, round2(entry.hours)))
+    }
+  }
+
+  return Array.from(byKey.values()).sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date)
+    return String(a[labelKey]).localeCompare(String(b[labelKey]))
+  })
+}
+
+export async function groupByDayAndStaff(
+  filters: ReportFilters,
+  client?: SupabaseClientLike
+): Promise<DayStaffTotal[]> {
+  const entries = await getReportEntries(filters, client)
+  return groupByDay(
+    entries,
+    (e) => e.user_name,
+    (date, userName, hours) => ({ date, userName, hours }),
+    'userName'
+  )
+}
+
+export async function groupByDayAndSite(
+  filters: ReportFilters,
+  client?: SupabaseClientLike
+): Promise<DaySiteTotal[]> {
+  const entries = await getReportEntries(filters, client)
+  return groupByDay(
+    entries,
+    (e) => e.site_name,
+    (date, siteName, hours) => ({ date, siteName, hours }),
+    'siteName'
+  )
+}
+
 export async function groupBySite(
   filters: ReportFilters,
   client?: SupabaseClientLike

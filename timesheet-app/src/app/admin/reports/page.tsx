@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getReportEntries } from '@/lib/reports'
+import { groupByDayAndStaff, groupByDayAndSite } from '@/lib/reportGroups'
 import { requireAdmin } from '@/lib/authGuards'
 import { WeeklyReportPanel } from './weekly-report-panel'
 
@@ -18,12 +19,18 @@ export default async function ReportsPage({
   const siteId = typeof sp.siteId === 'string' ? sp.siteId : ''
 
   const supabase = await createClient()
-  const [{ data: crew }, { data: sites }, entries, { data: settings }] = await Promise.all([
-    supabase.from('profiles').select('id, full_name').order('full_name'),
-    supabase.from('sites').select('id, name').order('name'),
-    getReportEntries({ from, to, userId, siteId }),
-    supabase.from('app_settings').select('weekly_report_enabled').eq('id', true).single(),
-  ])
+  const [{ data: crew }, { data: sites }, entries, { data: settings }, dailySiteTotals, dailyStaffTotals] =
+    await Promise.all([
+      supabase.from('profiles').select('id, full_name').order('full_name'),
+      supabase.from('sites').select('id, name').order('name'),
+      getReportEntries({ from, to, userId, siteId }),
+      supabase.from('app_settings').select('weekly_report_enabled').eq('id', true).single(),
+      siteId ? groupByDayAndStaff({ from, to, userId, siteId }) : Promise.resolve([]),
+      userId ? groupByDayAndSite({ from, to, userId, siteId }) : Promise.resolve([]),
+    ])
+
+  const selectedSiteName = siteId ? (sites ?? []).find((s) => s.id === siteId)?.name : undefined
+  const selectedStaffName = userId ? (crew ?? []).find((c) => c.id === userId)?.full_name : undefined
 
   const totalHours = entries.reduce((sum, e) => sum + (e.hours ?? 0), 0)
 
@@ -134,6 +141,76 @@ export default async function ReportsPage({
           Filter
         </button>
       </form>
+
+      {siteId && (
+        <div className="space-y-2">
+          <h2 className="font-medium">
+            Daily hours at {selectedSiteName ?? 'this site'}
+          </h2>
+          <div className="overflow-x-auto rounded-lg border border-black/10">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-black/10 bg-black/5">
+                <tr>
+                  <th className="p-3">Date</th>
+                  <th className="p-3">Staff</th>
+                  <th className="p-3">Hours</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-black/10">
+                {dailySiteTotals.map((row) => (
+                  <tr key={`${row.date}__${row.userName}`}>
+                    <td className="p-3">{row.date}</td>
+                    <td className="p-3">{row.userName}</td>
+                    <td className="p-3">{row.hours}</td>
+                  </tr>
+                ))}
+                {dailySiteTotals.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="p-6 text-center text-black/60">
+                      No completed shifts at this site in range.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {userId && (
+        <div className="space-y-2">
+          <h2 className="font-medium">
+            Daily hours for {selectedStaffName ?? 'this staff member'}
+          </h2>
+          <div className="overflow-x-auto rounded-lg border border-black/10">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-black/10 bg-black/5">
+                <tr>
+                  <th className="p-3">Date</th>
+                  <th className="p-3">Site</th>
+                  <th className="p-3">Hours</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-black/10">
+                {dailyStaffTotals.map((row) => (
+                  <tr key={`${row.date}__${row.siteName}`}>
+                    <td className="p-3">{row.date}</td>
+                    <td className="p-3">{row.siteName}</td>
+                    <td className="p-3">{row.hours}</td>
+                  </tr>
+                ))}
+                {dailyStaffTotals.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="p-6 text-center text-black/60">
+                      No completed shifts for this staff member in range.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="overflow-x-auto rounded-lg border border-black/10">
         <table className="w-full text-left text-sm">
