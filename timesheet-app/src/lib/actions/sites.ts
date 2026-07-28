@@ -82,6 +82,7 @@ export async function createSite(formData: FormData) {
   }
 
   revalidatePath('/admin/sites')
+  revalidatePath('/admin/customers/[id]', 'page')
 }
 
 export async function updateSite(siteId: string, formData: FormData) {
