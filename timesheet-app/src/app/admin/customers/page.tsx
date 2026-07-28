@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { createCustomer, setCustomerActive } from '@/lib/actions/customers'
+import { createCustomer, setCustomerActive, deleteCustomer } from '@/lib/actions/customers'
 import { getCurrentProfile } from '@/lib/supabase/profile'
 
 type Customer = {
@@ -8,6 +8,7 @@ type Customer = {
   name: string
   contact_person: string | null
   is_active: boolean
+  siteCount: number
 }
 
 export default async function CustomersPage() {
@@ -15,13 +16,24 @@ export default async function CustomersPage() {
   const canEdit = profile.role === 'admin'
 
   const supabase = await createClient()
-  const { data: customers } = await supabase
-    .from('customers')
-    .select('id, name, contact_person, is_active')
-    .order('is_active', { ascending: false })
-    .order('name', { ascending: true })
+  const [{ data: customers }, { data: siteRows }] = await Promise.all([
+    supabase
+      .from('customers')
+      .select('id, name, contact_person, is_active')
+      .order('is_active', { ascending: false })
+      .order('name', { ascending: true }),
+    supabase.from('sites').select('customer_id'),
+  ])
 
-  const customerList = (customers ?? []) as Customer[]
+  const siteCounts = new Map<string, number>()
+  for (const row of siteRows ?? []) {
+    siteCounts.set(row.customer_id, (siteCounts.get(row.customer_id) ?? 0) + 1)
+  }
+
+  const customerList = (customers ?? []).map((c) => ({
+    ...c,
+    siteCount: siteCounts.get(c.id) ?? 0,
+  })) as Customer[]
   const active = customerList.filter((c) => c.is_active)
   const archived = customerList.filter((c) => !c.is_active)
 
@@ -116,11 +128,20 @@ function CustomerList({
               )}
             </div>
             {canEdit && (
-              <form action={setCustomerActive.bind(null, customer.id, !customer.is_active)}>
-                <button type="submit" className="text-sm underline shrink-0">
-                  {customer.is_active ? 'Archive' : 'Restore'}
-                </button>
-              </form>
+              <div className="flex shrink-0 items-center gap-3">
+                <form action={setCustomerActive.bind(null, customer.id, !customer.is_active)}>
+                  <button type="submit" className="text-sm underline">
+                    {customer.is_active ? 'Archive' : 'Restore'}
+                  </button>
+                </form>
+                {!customer.is_active && customer.siteCount === 0 && (
+                  <form action={deleteCustomer.bind(null, customer.id)}>
+                    <button type="submit" className="text-sm text-red-600 underline">
+                      Delete
+                    </button>
+                  </form>
+                )}
+              </div>
             )}
           </li>
         ))}
