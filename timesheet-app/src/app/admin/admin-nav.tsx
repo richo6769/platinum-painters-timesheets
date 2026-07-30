@@ -7,11 +7,11 @@ import type { Role } from '@/lib/supabase/profile'
 const links = [
   { href: '/admin', label: 'Dashboard' },
   { href: '/clock', label: 'Clock In/Out' },
+  { href: '/admin/activity', label: 'Activity' },
+  { href: '/admin/reports', label: 'Reports', adminOnly: true },
   { href: '/admin/customers', label: 'Customers' },
   { href: '/admin/sites', label: 'Sites' },
   { href: '/admin/staff', label: 'Staff' },
-  { href: '/admin/activity', label: 'Activity' },
-  { href: '/admin/reports', label: 'Reports', adminOnly: true },
 ]
 
 export function AdminNav({ role }: { role: Role }) {
