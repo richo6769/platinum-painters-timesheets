@@ -1,5 +1,6 @@
 import { Document, Page, View, Text, Image, Link, StyleSheet } from '@react-pdf/renderer'
 import type { StaffGroup } from '@/lib/reportGroups'
+import { formatNZDateTimeLong } from '@/lib/formatNZ'
 
 const styles = StyleSheet.create({
   page: { padding: 24, fontSize: 9, fontFamily: 'Helvetica' },
@@ -46,15 +47,7 @@ const COLS = {
   net: '8%',
 }
 
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('en-NZ', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
-}
+const formatDateTime = formatNZDateTimeLong
 
 export function TimesheetReportPdf({
   staffGroups,

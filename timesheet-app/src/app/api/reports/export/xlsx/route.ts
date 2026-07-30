@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs'
 import { getCurrentProfile } from '@/lib/supabase/profile'
 import { groupByStaff, groupBySite, type StaffGroup, type SiteGroup } from '@/lib/reportGroups'
 import type { ReportEntry } from '@/lib/reports'
+import { toNZExcelDate } from '@/lib/formatNZ'
 
 const HEADER_LABELS = [
   'Start Time',
@@ -38,8 +39,8 @@ function addEntryRow(sheet: ExcelJS.Worksheet, entry: ReportEntry, indent: numbe
 
   const row = sheet.addRow([
     ...blanks(indent),
-    new Date(entry.clock_in_at),
-    entry.clock_out_at ? new Date(entry.clock_out_at) : '-',
+    toNZExcelDate(entry.clock_in_at),
+    entry.clock_out_at ? toNZExcelDate(entry.clock_out_at) : '-',
     entry.site_name,
     entry.notes ?? '-',
     entry.clock_in_map_url ? { text: 'Map', hyperlink: entry.clock_in_map_url } : '-',

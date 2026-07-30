@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentProfile } from '@/lib/supabase/profile'
 import { getReportEntries } from '@/lib/reports'
+import { formatNZDateTime } from '@/lib/formatNZ'
 
 function csvEscape(value: string): string {
   if (/[",\n]/.test(value)) {
@@ -28,8 +29,8 @@ export async function GET(request: NextRequest) {
     e.user_name,
     e.customer_name,
     e.site_name,
-    new Date(e.clock_in_at).toLocaleString(),
-    e.clock_out_at ? new Date(e.clock_out_at).toLocaleString() : '',
+    formatNZDateTime(e.clock_in_at),
+    e.clock_out_at ? formatNZDateTime(e.clock_out_at) : '',
     e.break_minutes.toString(),
     e.hours?.toString() ?? '',
     e.notes ?? '',
