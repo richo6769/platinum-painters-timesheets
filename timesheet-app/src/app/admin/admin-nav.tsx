@@ -12,6 +12,7 @@ const links = [
   { href: '/admin/customers', label: 'Customers' },
   { href: '/admin/sites', label: 'Sites' },
   { href: '/admin/staff', label: 'Staff' },
+  { href: '/admin/staff-types', label: 'Manage Staff Types', adminOnly: true },
 ]
 
 export function AdminNav({ role }: { role: Role }) {
