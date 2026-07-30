@@ -15,6 +15,8 @@ type OpenEntryRow = {
   clock_in_at: string
   clock_in_lat: number | null
   clock_in_lng: number | null
+  clock_in_device_id: string | null
+  clock_in_device_label: string | null
   profiles: { full_name: string } | { full_name: string }[] | null
   sites: SiteRelation
 }
@@ -39,7 +41,7 @@ export default async function ActivityPage() {
     supabase
       .from('timesheet_entries')
       .select(
-        'id, user_id, clock_in_at, clock_in_lat, clock_in_lng, profiles(full_name), sites(name, customers(name))'
+        'id, user_id, clock_in_at, clock_in_lat, clock_in_lng, clock_in_device_id, clock_in_device_label, profiles(full_name), sites(name, customers(name))'
       )
       .is('clock_out_at', null)
       .order('clock_in_at', { ascending: true })
@@ -52,6 +54,17 @@ export default async function ActivityPage() {
       : Promise.resolve({ data: null }),
   ])
 
+  // A device_id currently shared across two different active clock-ins can't
+  // happen innocently - one phone can't be physically in two people's hands
+  // at once - so it's worth flagging.
+  const usersByDevice = new Map<string, Set<string>>()
+  for (const row of data ?? []) {
+    if (!row.clock_in_device_id) continue
+    const set = usersByDevice.get(row.clock_in_device_id) ?? new Set<string>()
+    set.add(row.user_id)
+    usersByDevice.set(row.clock_in_device_id, set)
+  }
+
   const rows = (data ?? []).map((row) => {
     const profileRow = first(row.profiles)
     const site = first(row.sites)
@@ -63,6 +76,10 @@ export default async function ActivityPage() {
       customerName: customer?.name ?? '',
       since: row.clock_in_at,
       mapUrl: mapUrl(row.clock_in_lat, row.clock_in_lng),
+      deviceLabel: row.clock_in_device_label,
+      deviceShared: row.clock_in_device_id
+        ? (usersByDevice.get(row.clock_in_device_id)?.size ?? 0) > 1
+        : false,
     }
   })
 
@@ -145,6 +162,12 @@ export default async function ActivityPage() {
                   {row.siteName}
                   {row.customerName ? ` (${row.customerName})` : ''}
                 </p>
+                {row.deviceLabel && (
+                  <p className={`text-xs ${row.deviceShared ? 'font-medium text-red-600' : 'text-black/40'}`}>
+                    {row.deviceLabel}
+                    {row.deviceShared ? ' — also used by another active clock-in!' : ''}
+                  </p>
+                )}
               </div>
               <div className="text-right text-sm">
                 <p className="font-medium tabular-nums">{elapsedSince(row.since)}</p>

@@ -3,7 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentProfile } from '@/lib/supabase/profile'
 import { InviteStaffForm } from './invite-form'
-import { setStaffActive, resendInvite } from '@/lib/actions/staff'
+import { EmailActionButton } from './email-action-button'
+import { setStaffActive, resendInvite, deleteStaff } from '@/lib/actions/staff'
 import type { Role } from '@/lib/supabase/profile'
 
 type StaffRow = {
@@ -13,6 +14,7 @@ type StaffRow = {
   role: Role
   is_active: boolean
   pending: boolean
+  entryCount: number
 }
 
 export default async function StaffPage() {
@@ -20,16 +22,26 @@ export default async function StaffPage() {
   const canEdit = profile.role === 'admin'
 
   const supabase = await createClient()
-  const [{ data: staff }, { data: authUsers }] = await Promise.all([
+  const [{ data: staff }, { data: authUsers }, { data: entryRows }] = await Promise.all([
     supabase.from('profiles').select('id, full_name, email, role, is_active').order('full_name'),
     createAdminClient().auth.admin.listUsers(),
+    supabase.from('timesheet_entries').select('user_id'),
   ])
 
   const neverSignedIn = new Set(
     (authUsers?.users ?? []).filter((u) => !u.last_sign_in_at).map((u) => u.id)
   )
 
-  const staffList = (staff ?? []).map((s) => ({ ...s, pending: neverSignedIn.has(s.id) })) as StaffRow[]
+  const entryCounts = new Map<string, number>()
+  for (const row of entryRows ?? []) {
+    entryCounts.set(row.user_id, (entryCounts.get(row.user_id) ?? 0) + 1)
+  }
+
+  const staffList = (staff ?? []).map((s) => ({
+    ...s,
+    pending: neverSignedIn.has(s.id),
+    entryCount: entryCounts.get(s.id) ?? 0,
+  })) as StaffRow[]
   const active = staffList.filter((s) => s.is_active)
   const archived = staffList.filter((s) => !s.is_active)
 
@@ -100,16 +112,24 @@ function StaffList({
             <div className="flex shrink-0 items-center gap-3">
               <span className="text-sm text-black/60 capitalize">{person.role}</span>
               {person.pending && person.is_active && (
-                <form action={resendInvite.bind(null, person.id)}>
-                  <button type="submit" className="text-sm underline">
-                    Resend invite
-                  </button>
-                </form>
+                <EmailActionButton
+                  action={resendInvite.bind(null, person.id)}
+                  label="Resend invite"
+                  pendingLabel="Sending…"
+                  successMessage="Invite sent."
+                />
               )}
               {canEdit && person.id !== currentUserId && (
                 <form action={setStaffActive.bind(null, person.id, !person.is_active)}>
                   <button type="submit" className="text-sm underline">
                     {person.is_active ? 'Deactivate' : 'Restore'}
+                  </button>
+                </form>
+              )}
+              {canEdit && person.id !== currentUserId && !person.is_active && person.entryCount === 0 && (
+                <form action={deleteStaff.bind(null, person.id)}>
+                  <button type="submit" className="text-sm text-red-600 underline">
+                    Delete
                   </button>
                 </form>
               )}

@@ -32,15 +32,20 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const path = request.nextUrl.pathname
-  const isPublicRoute = path === '/login'
+  // /reset-password is reachable regardless of session state: the recovery
+  // link's token is only exchanged for a session client-side (via the URL
+  // hash), which this server-side check can't see yet on first load - and
+  // an existing session shouldn't bounce someone away from it either.
+  const isAlwaysPublic = path === '/reset-password'
+  const isPublicWhenLoggedOut = path === '/login'
 
-  if (!user && !isPublicRoute) {
+  if (!user && !isAlwaysPublic && !isPublicWhenLoggedOut) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  if (user && isPublicRoute) {
+  if (user && isPublicWhenLoggedOut) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)

@@ -222,6 +222,7 @@ export default async function ReportsPage({
               <th className="p-3">Clock out</th>
               <th className="p-3">Break</th>
               <th className="p-3">Hours</th>
+              <th className="p-3">Device</th>
               <th className="p-3">Notes</th>
               <th className="p-3"></th>
             </tr>
@@ -255,6 +256,21 @@ export default async function ReportsPage({
                 </td>
                 <td className="p-3">{e.break_minutes > 0 ? `${e.break_minutes}m` : '—'}</td>
                 <td className="p-3">{e.hours ?? '—'}</td>
+                <td className={`p-3 text-xs ${e.device_shared ? 'font-medium text-red-600' : 'text-black/60'}`}>
+                  In: {e.clock_in_device_label ?? '—'}
+                  {e.clock_out_device_label && e.clock_out_device_label !== e.clock_in_device_label && (
+                    <>
+                      <br />
+                      Out: {e.clock_out_device_label}
+                    </>
+                  )}
+                  {e.device_shared && (
+                    <>
+                      <br />
+                      also used by another staff member
+                    </>
+                  )}
+                </td>
                 <td className="max-w-xs truncate p-3">{e.notes ?? ''}</td>
                 <td className="p-3">
                   <Link href={`/admin/reports/${e.id}/edit`} className="underline">

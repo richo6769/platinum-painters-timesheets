@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { updateStaff, sendPasswordReset, setStaffActive } from '@/lib/actions/staff'
 import { requireAdmin } from '@/lib/authGuards'
+import { EmailActionButton } from '../email-action-button'
+import { SetPasswordForm } from '../set-password-form'
 
 export default async function EditStaffPage({
   params,
@@ -63,11 +65,14 @@ export default async function EditStaffPage({
         </button>
       </form>
 
-      <form action={sendPasswordReset.bind(null, person.id)}>
-        <button type="submit" className="text-sm underline">
-          Send password reset email
-        </button>
-      </form>
+      <EmailActionButton
+        action={sendPasswordReset.bind(null, person.id)}
+        label="Send password reset email"
+        pendingLabel="Sending…"
+        successMessage="Email sent."
+      />
+
+      <SetPasswordForm staffId={person.id} />
 
       {person.id !== caller.id && (
         <form action={setStaffActive.bind(null, person.id, !person.is_active)}>
