@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getReportEntries } from '@/lib/reports'
 import { groupByDayAndStaff, groupByDayAndSite } from '@/lib/reportGroups'
 import { requireAdmin } from '@/lib/authGuards'
+import { formatNZDateTime } from '@/lib/formatNZ'
 import { WeeklyReportPanel } from './weekly-report-panel'
 
 export default async function ReportsPage({
@@ -222,6 +223,7 @@ export default async function ReportsPage({
               <th className="p-3">Clock out</th>
               <th className="p-3">Break</th>
               <th className="p-3">Hours</th>
+              <th className="p-3">Device</th>
               <th className="p-3">Notes</th>
               <th className="p-3"></th>
             </tr>
@@ -232,7 +234,7 @@ export default async function ReportsPage({
                 <td className="p-3">{e.user_name}</td>
                 <td className="p-3">{e.site_name}</td>
                 <td className="p-3">
-                  {new Date(e.clock_in_at).toLocaleString()}
+                  {formatNZDateTime(e.clock_in_at)}
                   {e.clock_in_map_url && (
                     <>
                       {' '}
@@ -243,7 +245,7 @@ export default async function ReportsPage({
                   )}
                 </td>
                 <td className="p-3">
-                  {e.clock_out_at ? new Date(e.clock_out_at).toLocaleString() : 'In progress'}
+                  {e.clock_out_at ? formatNZDateTime(e.clock_out_at) : 'In progress'}
                   {e.clock_out_map_url && (
                     <>
                       {' '}
@@ -255,6 +257,21 @@ export default async function ReportsPage({
                 </td>
                 <td className="p-3">{e.break_minutes > 0 ? `${e.break_minutes}m` : '—'}</td>
                 <td className="p-3">{e.hours ?? '—'}</td>
+                <td className={`p-3 text-xs ${e.device_shared ? 'font-medium text-red-600' : 'text-black/60'}`}>
+                  In: {e.clock_in_device_label ?? '—'}
+                  {e.clock_out_device_label && e.clock_out_device_label !== e.clock_in_device_label && (
+                    <>
+                      <br />
+                      Out: {e.clock_out_device_label}
+                    </>
+                  )}
+                  {e.device_shared && (
+                    <>
+                      <br />
+                      also used by another staff member
+                    </>
+                  )}
+                </td>
                 <td className="max-w-xs truncate p-3">{e.notes ?? ''}</td>
                 <td className="p-3">
                   <Link href={`/admin/reports/${e.id}/edit`} className="underline">

@@ -9,7 +9,12 @@ type Coords = { lat: number | null; lng: number | null }
 type ActionResult = { error?: string } | undefined
 
 export async function clockIn(
-  input: { siteId: string; safetyAcknowledged?: boolean } & Coords
+  input: {
+    siteId: string
+    safetyAcknowledged?: boolean
+    deviceId?: string
+    deviceLabel?: string
+  } & Coords
 ): Promise<ActionResult> {
   const profile = await getCurrentProfile()
   const supabase = await createClient()
@@ -47,6 +52,8 @@ export async function clockIn(
     site_id: input.siteId,
     clock_in_lat: input.lat,
     clock_in_lng: input.lng,
+    clock_in_device_id: input.deviceId ?? null,
+    clock_in_device_label: input.deviceLabel ?? null,
   })
 
   if (error) {
@@ -97,6 +104,8 @@ export async function clockOut(
     notes: string
     breakMinutes: number
     clockOutAt: string
+    deviceId?: string
+    deviceLabel?: string
   } & Coords
 ): Promise<ActionResult> {
   const profile = await getCurrentProfile()
@@ -110,6 +119,8 @@ export async function clockOut(
       clock_out_lng: input.lng,
       break_minutes: Math.max(0, Math.round(input.breakMinutes)),
       notes: input.notes.trim() || null,
+      clock_out_device_id: input.deviceId ?? null,
+      clock_out_device_label: input.deviceLabel ?? null,
     })
     .eq('id', input.entryId)
     .eq('user_id', profile.id)

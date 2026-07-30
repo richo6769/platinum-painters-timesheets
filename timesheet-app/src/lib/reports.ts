@@ -21,10 +21,14 @@ export type ReportEntry = {
   notes: string | null
   clock_in_map_url: string | null
   clock_out_map_url: string | null
+  clock_in_device_label: string | null
+  clock_out_device_label: string | null
+  device_shared: boolean
 }
 
 type RawRow = {
   id: string
+  user_id: string
   clock_in_at: string
   clock_out_at: string | null
   break_minutes: number
@@ -33,6 +37,10 @@ type RawRow = {
   clock_in_lng: number | null
   clock_out_lat: number | null
   clock_out_lng: number | null
+  clock_in_device_id: string | null
+  clock_in_device_label: string | null
+  clock_out_device_id: string | null
+  clock_out_device_label: string | null
   profiles: { full_name: string } | { full_name: string }[] | null
   sites:
     | { name: string; customers: { name: string } | { name: string }[] | null }
@@ -54,7 +62,7 @@ export async function getReportEntries(
   let query = supabase
     .from('timesheet_entries')
     .select(
-      'id, clock_in_at, clock_out_at, break_minutes, notes, clock_in_lat, clock_in_lng, clock_out_lat, clock_out_lng, profiles(full_name), sites(name, customers(name))'
+      'id, user_id, clock_in_at, clock_out_at, break_minutes, notes, clock_in_lat, clock_in_lng, clock_out_lat, clock_out_lng, clock_in_device_id, clock_in_device_label, clock_out_device_id, clock_out_device_label, profiles(full_name), sites(name, customers(name))'
     )
     .order('clock_in_at', { ascending: false })
 
@@ -64,6 +72,19 @@ export async function getReportEntries(
   if (filters.siteId) query = query.eq('site_id', filters.siteId)
 
   const { data } = await query.returns<RawRow[]>()
+
+  // A device_id used by more than one distinct staff member anywhere in
+  // this result set is worth flagging - one phone doesn't belong to two
+  // people. Checks both clock-in and clock-out devices.
+  const usersByDevice = new Map<string, Set<string>>()
+  for (const row of data ?? []) {
+    for (const deviceId of [row.clock_in_device_id, row.clock_out_device_id]) {
+      if (!deviceId) continue
+      const set = usersByDevice.get(deviceId) ?? new Set<string>()
+      set.add(row.user_id)
+      usersByDevice.set(deviceId, set)
+    }
+  }
 
   return (data ?? []).map((row) => {
     const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
@@ -86,6 +107,12 @@ export async function getReportEntries(
       notes: row.notes,
       clock_in_map_url: mapUrl(row.clock_in_lat, row.clock_in_lng),
       clock_out_map_url: mapUrl(row.clock_out_lat, row.clock_out_lng),
+      clock_in_device_label: row.clock_in_device_label,
+      clock_out_device_label: row.clock_out_device_label,
+      device_shared:
+        [row.clock_in_device_id, row.clock_out_device_id].some(
+          (id) => id && (usersByDevice.get(id)?.size ?? 0) > 1
+        ),
     }
   })
 }

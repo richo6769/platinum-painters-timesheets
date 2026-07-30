@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { clockIn, clockOut } from '@/lib/actions/timesheet'
+import { getDeviceId, getDeviceLabel } from '@/lib/deviceId'
 
 type Site = {
   id: string
@@ -34,10 +35,21 @@ function getPosition(): Promise<Coords> {
       resolve({ lat: null, lng: null })
       return
     }
+
+    // A high-accuracy GPS fix can take a while (especially indoors or on a
+    // cold start) and silently fails to a blank location if it doesn't land
+    // within the timeout. Give it more room, then fall back to a faster,
+    // lower-accuracy (network-based) fix rather than giving up entirely.
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => resolve({ lat: null, lng: null }),
-      { enableHighAccuracy: true, timeout: 8000 }
+      () => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          () => resolve({ lat: null, lng: null }),
+          { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+        )
+      },
+      { enableHighAccuracy: true, timeout: 15000 }
     )
   })
 }
@@ -77,7 +89,7 @@ export function ClockWidget({
   sites: Site[]
   openEntry: OpenEntry | null
 }) {
-  const [siteId, setSiteId] = useState(sites[0]?.id ?? '')
+  const [siteId, setSiteId] = useState('')
   const selectedSite = sites.find((s) => s.id === siteId) ?? null
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
@@ -105,7 +117,14 @@ export function ClockWidget({
     setError('')
     startTransition(async () => {
       const { lat, lng } = await getPosition()
-      const result = await clockIn({ siteId, lat, lng, safetyAcknowledged: safetyChecked })
+      const result = await clockIn({
+        siteId,
+        lat,
+        lng,
+        safetyAcknowledged: safetyChecked,
+        deviceId: getDeviceId(),
+        deviceLabel: getDeviceLabel(),
+      })
       if (result?.error) setError(result.error)
     })
   }
@@ -139,6 +158,8 @@ export function ClockWidget({
         clockOutAt: new Date(endedAtMs).toISOString(),
         lat: endCoords.lat,
         lng: endCoords.lng,
+        deviceId: getDeviceId(),
+        deviceLabel: getDeviceLabel(),
       })
       if (result?.error) setError(result.error)
     })
@@ -276,9 +297,13 @@ export function ClockWidget({
             <select
               id="site"
               value={siteId}
+              required
               onChange={(e) => handleSiteChange(e.target.value)}
               className="w-full rounded-md border border-black/20 px-3 py-2"
             >
+              <option value="" disabled>
+                Select a site…
+              </option>
               {sites.map((site) => (
                 <option key={site.id} value={site.id}>
                   {site.label}
@@ -324,7 +349,7 @@ export function ClockWidget({
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button
             onClick={handleClockIn}
-            disabled={pending || (needsSafetyAck && !safetyChecked)}
+            disabled={pending || !siteId || (needsSafetyAck && !safetyChecked)}
             className="w-full rounded-md bg-black px-4 py-3 text-white disabled:opacity-50"
           >
             {pending ? 'Clocking in…' : 'Clock In'}

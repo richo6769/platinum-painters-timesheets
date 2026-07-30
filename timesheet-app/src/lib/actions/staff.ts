@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAdmin, requireAdminOrSupervisor } from '@/lib/authGuards'
+import { SITE_URL } from '@/lib/siteUrl'
 import type { Role } from '@/lib/supabase/profile'
 
 const VALID_ROLES: Role[] = ['admin', 'supervisor', 'painter']
@@ -40,6 +41,7 @@ export async function inviteStaff(
   const adminClient = createAdminClient()
   const { data, error } = await adminClient.auth.admin.inviteUserByEmail(email.trim(), {
     data: { full_name: full_name.trim() },
+    redirectTo: `${SITE_URL}/reset-password`,
   })
 
   if (error) {
@@ -79,7 +81,13 @@ export async function updateStaff(staffId: string, formData: FormData) {
   redirect('/admin/staff')
 }
 
-export async function sendPasswordReset(staffId: string) {
+export type EmailActionState = { success?: boolean; error?: string } | undefined
+
+export async function sendPasswordReset(
+  staffId: string,
+  _prevState: EmailActionState,
+  _formData: FormData
+): Promise<EmailActionState> {
   await requireAdmin()
 
   const supabase = await createClient()
@@ -89,15 +97,24 @@ export async function sendPasswordReset(staffId: string) {
     .eq('id', staffId)
     .single()
 
-  if (!person) return
+  if (!person) return { error: 'Staff member not found.' }
 
-  await supabase.auth.resetPasswordForEmail(person.email)
+  const { error } = await supabase.auth.resetPasswordForEmail(person.email, {
+    redirectTo: `${SITE_URL}/reset-password`,
+  })
+
+  if (error) return { error: error.message }
+  return { success: true }
 }
 
 // A "resend" for someone who never finished setting up their account is the
 // same underlying email as a password reset - it re-sends a fresh link they
 // can use to set a password and sign in for the first time.
-export async function resendInvite(staffId: string) {
+export async function resendInvite(
+  staffId: string,
+  _prevState: EmailActionState,
+  _formData: FormData
+): Promise<EmailActionState> {
   await requireAdminOrSupervisor()
 
   const supabase = await createClient()
@@ -107,9 +124,33 @@ export async function resendInvite(staffId: string) {
     .eq('id', staffId)
     .single()
 
-  if (!person) return
+  if (!person) return { error: 'Staff member not found.' }
 
-  await supabase.auth.resetPasswordForEmail(person.email)
+  const { error } = await supabase.auth.resetPasswordForEmail(person.email, {
+    redirectTo: `${SITE_URL}/reset-password`,
+  })
+
+  if (error) return { error: error.message }
+  return { success: true }
+}
+
+export async function setStaffPassword(
+  staffId: string,
+  _prevState: EmailActionState,
+  formData: FormData
+): Promise<EmailActionState> {
+  await requireAdmin()
+
+  const password = formData.get('password')
+  if (typeof password !== 'string' || password.length < 8) {
+    return { error: 'Password must be at least 8 characters.' }
+  }
+
+  const adminClient = createAdminClient()
+  const { error } = await adminClient.auth.admin.updateUserById(staffId, { password })
+
+  if (error) return { error: error.message }
+  return { success: true }
 }
 
 // Deactivating (rather than deleting) keeps the person's past timesheet
@@ -127,6 +168,27 @@ export async function setStaffActive(staffId: string, isActive: boolean) {
   await adminClient.auth.admin.updateUserById(staffId, {
     ban_duration: isActive ? 'none' : '876000h',
   })
+
+  revalidatePath('/admin/staff')
+}
+
+// Only for deactivated staff with zero timesheet entries - anyone who's
+// actually logged hours needs to stay (deleting the auth user cascades and
+// would wipe their history), which is exactly what deactivating protects.
+export async function deleteStaff(staffId: string) {
+  const caller = await requireAdmin()
+  if (staffId === caller.id) return
+
+  const supabase = await createClient()
+  const { count } = await supabase
+    .from('timesheet_entries')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', staffId)
+
+  if ((count ?? 0) > 0) return
+
+  const adminClient = createAdminClient()
+  await adminClient.auth.admin.deleteUser(staffId)
 
   revalidatePath('/admin/staff')
 }

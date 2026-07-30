@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
@@ -9,7 +10,10 @@ export type Profile = {
   role: Role
 }
 
-export async function getCurrentProfile(): Promise<Profile> {
+// cache() memoizes per request - the layout and the page both call this on
+// every navigation, which was firing two separate auth+profile round trips
+// to Supabase for a single page load before this was added.
+export const getCurrentProfile = cache(async (): Promise<Profile> => {
   const supabase = await createClient()
   const {
     data: { user },
@@ -30,4 +34,4 @@ export async function getCurrentProfile(): Promise<Profile> {
   }
 
   return profile
-}
+})
