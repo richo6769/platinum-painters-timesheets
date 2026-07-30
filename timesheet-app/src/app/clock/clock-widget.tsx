@@ -89,7 +89,7 @@ export function ClockWidget({
   sites: Site[]
   openEntry: OpenEntry | null
 }) {
-  const [siteId, setSiteId] = useState(sites[0]?.id ?? '')
+  const [siteId, setSiteId] = useState('')
   const selectedSite = sites.find((s) => s.id === siteId) ?? null
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
@@ -297,9 +297,13 @@ export function ClockWidget({
             <select
               id="site"
               value={siteId}
+              required
               onChange={(e) => handleSiteChange(e.target.value)}
               className="w-full rounded-md border border-black/20 px-3 py-2"
             >
+              <option value="" disabled>
+                Select a site…
+              </option>
               {sites.map((site) => (
                 <option key={site.id} value={site.id}>
                   {site.label}
@@ -345,7 +349,7 @@ export function ClockWidget({
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button
             onClick={handleClockIn}
-            disabled={pending || (needsSafetyAck && !safetyChecked)}
+            disabled={pending || !siteId || (needsSafetyAck && !safetyChecked)}
             className="w-full rounded-md bg-black px-4 py-3 text-white disabled:opacity-50"
           >
             {pending ? 'Clocking in…' : 'Clock In'}
