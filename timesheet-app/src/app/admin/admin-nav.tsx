@@ -7,6 +7,7 @@ import type { Role } from '@/lib/supabase/profile'
 const links = [
   { href: '/admin', label: 'Dashboard' },
   { href: '/clock', label: 'Clock In/Out' },
+  { href: '/timesheet', label: 'Timesheet' },
   { href: '/admin/activity', label: 'Activity' },
   { href: '/admin/reports', label: 'Reports', adminOnly: true },
   { href: '/admin/customers', label: 'Customers' },
@@ -23,7 +24,9 @@ export function AdminNav({ role }: { role: Role }) {
     <nav className="flex flex-col gap-2 p-3">
       {visibleLinks.map((link) => {
         const active =
-          link.href === '/admin' ? pathname === '/admin' : pathname.startsWith(link.href)
+          link.href === '/admin'
+            ? pathname === '/admin'
+            : pathname === link.href || pathname.startsWith(`${link.href}/`)
 
         return (
           <Link

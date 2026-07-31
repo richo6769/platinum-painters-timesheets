@@ -96,6 +96,9 @@ export default async function ClockPage() {
             Dashboard
           </Link>
         )}
+        <Link href="/timesheet" className="text-sm underline">
+          My Timesheet
+        </Link>
         <form action={logout}>
           <button className="text-sm underline">Sign out</button>
         </form>

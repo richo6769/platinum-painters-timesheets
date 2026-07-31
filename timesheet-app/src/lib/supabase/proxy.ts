@@ -31,6 +31,19 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // getUser() already made the one network round-trip to Supabase Auth that
+  // verifies this request's JWT. Stamp the verified id on the request so
+  // downstream Server Components (getCurrentProfile) can skip repeating that
+  // same round-trip on every single navigation. Rebuilding the response to
+  // pick up the new request header would drop any session-refresh cookies
+  // setAll already queued above, so carry those over explicitly.
+  if (user) {
+    request.headers.set('x-verified-user-id', user.id)
+    const refreshedCookies = response.cookies.getAll()
+    response = NextResponse.next({ request })
+    refreshedCookies.forEach((cookie) => response.cookies.set(cookie))
+  }
+
   const path = request.nextUrl.pathname
   // /reset-password is reachable regardless of session state: the recovery
   // link's token is only exchanged for a session client-side (via the URL
