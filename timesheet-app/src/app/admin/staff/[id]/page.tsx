@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { updateStaff, sendPasswordReset, setStaffActive } from '@/lib/actions/staff'
@@ -28,6 +29,9 @@ export default async function EditStaffPage({
     <div className="max-w-lg space-y-4">
       <h1 className="text-2xl font-semibold">Edit staff</h1>
       <p className="text-sm text-black/60">{person.email}</p>
+      <Link href={`/admin/staff/${person.id}/timesheet`} className="text-sm underline">
+        View timesheet
+      </Link>
 
       <form action={updateStaff.bind(null, person.id)} className="space-y-3">
         <div className="space-y-1">

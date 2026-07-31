@@ -95,7 +95,7 @@ function StaffList({
       {staffList.length === 0 && <p className="text-sm text-black/60">{emptyText}</p>}
       <ul className="divide-y divide-black/10 rounded-lg border border-black/10">
         {staffList.map((person) => (
-          <li key={person.id} className="flex items-center justify-between gap-4 p-3">
+          <li key={person.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               {canEdit ? (
                 <Link href={`/admin/staff/${person.id}`} className="font-medium underline">
@@ -109,8 +109,11 @@ function StaffList({
                 <p className="text-xs text-amber-600">Invited - hasn&apos;t signed in yet</p>
               )}
             </div>
-            <div className="flex shrink-0 items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 sm:shrink-0">
               <span className="text-sm text-black/60 capitalize">{person.role}</span>
+              <Link href={`/admin/staff/${person.id}/timesheet`} className="text-sm underline">
+                Timesheet
+              </Link>
               {person.pending && person.is_active && (
                 <EmailActionButton
                   action={resendInvite.bind(null, person.id)}
