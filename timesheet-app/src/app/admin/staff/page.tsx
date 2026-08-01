@@ -15,6 +15,7 @@ type StaffRow = {
   is_active: boolean
   pending: boolean
   entryCount: number
+  staff_types: { name: string } | { name: string }[] | null
 }
 
 export default async function StaffPage() {
@@ -22,10 +23,14 @@ export default async function StaffPage() {
   const canEdit = profile.role === 'admin'
 
   const supabase = await createClient()
-  const [{ data: staff }, { data: authUsers }, { data: entryRows }] = await Promise.all([
-    supabase.from('profiles').select('id, full_name, email, role, is_active').order('full_name'),
+  const [{ data: staff }, { data: authUsers }, { data: entryRows }, { data: staffTypes }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, full_name, email, role, is_active, staff_types(name)')
+      .order('full_name'),
     createAdminClient().auth.admin.listUsers(),
     supabase.from('timesheet_entries').select('user_id'),
+    supabase.from('staff_types').select('id, name').eq('is_active', true).order('name'),
   ])
 
   const neverSignedIn = new Set(
@@ -54,7 +59,7 @@ export default async function StaffPage() {
         </p>
       </div>
 
-      <InviteStaffForm role={profile.role} />
+      <InviteStaffForm role={profile.role} staffTypes={staffTypes ?? []} />
 
       <StaffList
         title="Active staff"
@@ -74,6 +79,10 @@ export default async function StaffPage() {
       )}
     </div>
   )
+}
+
+function staffTypeName(relation: StaffRow['staff_types']): string | undefined {
+  return Array.isArray(relation) ? relation[0]?.name : relation?.name
 }
 
 function StaffList({
@@ -110,7 +119,10 @@ function StaffList({
               )}
             </div>
             <div className="flex flex-wrap items-center gap-3 sm:shrink-0">
-              <span className="text-sm text-black/60 capitalize">{person.role}</span>
+              <span className="text-sm text-black/60 capitalize">
+                {person.role}
+                {staffTypeName(person.staff_types) && ` · ${staffTypeName(person.staff_types)}`}
+              </span>
               <Link href={`/admin/staff/${person.id}/timesheet`} className="text-sm underline">
                 Timesheet
               </Link>

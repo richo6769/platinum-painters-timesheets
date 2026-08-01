@@ -15,11 +15,14 @@ export default async function EditStaffPage({
 
   const { id } = await params
   const supabase = await createClient()
-  const { data: person } = await supabase
-    .from('profiles')
-    .select('id, full_name, email, role, is_active')
-    .eq('id', id)
-    .single()
+  const [{ data: person }, { data: staffTypes }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, full_name, email, role, is_active, staff_type_id')
+      .eq('id', id)
+      .single(),
+    supabase.from('staff_types').select('id, name').eq('is_active', true).order('name'),
+  ])
 
   if (!person) {
     notFound()
@@ -61,6 +64,26 @@ export default async function EditStaffPage({
             <option value="admin">Admin</option>
           </select>
         </div>
+        {(staffTypes ?? []).length > 0 && (
+          <div className="space-y-1">
+            <label htmlFor="staff_type_id" className="text-sm font-medium">
+              Staff type
+            </label>
+            <select
+              id="staff_type_id"
+              name="staff_type_id"
+              defaultValue={person.staff_type_id ?? ''}
+              className="w-full rounded-md border border-black/20 px-3 py-2 sm:w-auto"
+            >
+              <option value="">None</option>
+              {(staffTypes ?? []).map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <button
           type="submit"
           className="rounded-md bg-black px-4 py-2 text-sm text-white"

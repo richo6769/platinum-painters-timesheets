@@ -21,6 +21,9 @@ export async function inviteStaff(
   const email = formData.get('email')
   const full_name = formData.get('full_name')
   const submittedRole = formData.get('role')
+  const submittedStaffTypeId = formData.get('staff_type_id')
+  const staffTypeId =
+    typeof submittedStaffTypeId === 'string' && submittedStaffTypeId ? submittedStaffTypeId : null
 
   if (typeof email !== 'string' || !email.trim()) {
     return { error: 'Email is required.' }
@@ -48,9 +51,12 @@ export async function inviteStaff(
     return { error: error.message }
   }
 
-  if (role !== 'painter' && data.user) {
+  if ((role !== 'painter' || staffTypeId) && data.user) {
     const supabase = await createClient()
-    await supabase.from('profiles').update({ role }).eq('id', data.user.id)
+    const update: { role?: Role; staff_type_id?: string | null } = {}
+    if (role !== 'painter') update.role = role
+    if (staffTypeId) update.staff_type_id = staffTypeId
+    await supabase.from('profiles').update(update).eq('id', data.user.id)
   }
 
   revalidatePath('/admin/staff')
@@ -65,6 +71,9 @@ export async function updateStaff(staffId: string, formData: FormData) {
   const role: Role = VALID_ROLES.includes(submittedRole as Role)
     ? (submittedRole as Role)
     : 'painter'
+  const submittedStaffTypeId = formData.get('staff_type_id')
+  const staffTypeId =
+    typeof submittedStaffTypeId === 'string' && submittedStaffTypeId ? submittedStaffTypeId : null
 
   if (typeof full_name !== 'string' || !full_name.trim()) return
 
@@ -74,6 +83,7 @@ export async function updateStaff(staffId: string, formData: FormData) {
     .update({
       full_name: full_name.trim(),
       role,
+      staff_type_id: staffTypeId,
     })
     .eq('id', staffId)
 
