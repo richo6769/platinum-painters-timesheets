@@ -90,17 +90,25 @@ export default async function ClockPage() {
       <Image src="/logo.webp" alt="Platinum Painters" width={140} height={56} priority />
       <p className="text-sm text-black/60">Signed in as {profile.full_name}</p>
       <ClockWidget sites={sites} openEntry={openEntry} />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-center gap-2">
         {profile.role === 'admin' && (
-          <Link href="/admin" className="text-sm underline">
+          <Link
+            href="/admin"
+            className="rounded-lg bg-gray-300 px-3 py-1.5 text-xs font-medium text-gray-800 transition-colors hover:bg-gray-400"
+          >
             Dashboard
           </Link>
         )}
-        <Link href="/timesheet" className="text-sm underline">
+        <Link
+          href="/timesheet"
+          className="rounded-lg bg-gray-300 px-3 py-1.5 text-xs font-medium text-gray-800 transition-colors hover:bg-gray-400"
+        >
           My Timesheet
         </Link>
         <form action={logout}>
-          <button className="text-sm underline">Sign out</button>
+          <button className="rounded-lg bg-gray-300 px-3 py-1.5 text-xs font-medium text-gray-800 transition-colors hover:bg-gray-400">
+            Sign out
+          </button>
         </form>
       </div>
     </main>
