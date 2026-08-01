@@ -33,9 +33,11 @@ export async function inviteStaff(
   }
 
   // Supervisors can only ever create Painter accounts, regardless of what
-  // the form submits.
+  // the form submits. Same for anyone given a staff type (Contractor,
+  // Apprentice, etc.) - that's a job classification, not a permission
+  // grant, so it never carries Admin/Supervisor access.
   const role: Role =
-    caller.role === 'supervisor'
+    caller.role === 'supervisor' || staffTypeId
       ? 'painter'
       : VALID_ROLES.includes(submittedRole as Role)
         ? (submittedRole as Role)
@@ -68,12 +70,16 @@ export async function updateStaff(staffId: string, formData: FormData) {
 
   const full_name = formData.get('full_name')
   const submittedRole = formData.get('role')
-  const role: Role = VALID_ROLES.includes(submittedRole as Role)
-    ? (submittedRole as Role)
-    : 'painter'
   const submittedStaffTypeId = formData.get('staff_type_id')
   const staffTypeId =
     typeof submittedStaffTypeId === 'string' && submittedStaffTypeId ? submittedStaffTypeId : null
+  // A staff type is a job classification, not a permission grant - it
+  // never carries Admin/Supervisor access.
+  const role: Role = staffTypeId
+    ? 'painter'
+    : VALID_ROLES.includes(submittedRole as Role)
+      ? (submittedRole as Role)
+      : 'painter'
 
   if (typeof full_name !== 'string' || !full_name.trim()) return
 
