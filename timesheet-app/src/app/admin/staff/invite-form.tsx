@@ -4,9 +4,7 @@ import { useActionState } from 'react'
 import { inviteStaff } from '@/lib/actions/staff'
 import type { Role } from '@/lib/supabase/profile'
 
-type StaffType = { id: string; name: string }
-
-export function InviteStaffForm({ role, staffTypes }: { role: Role; staffTypes: StaffType[] }) {
+export function InviteStaffForm({ role }: { role: Role }) {
   const [state, action, pending] = useActionState(inviteStaff, undefined)
   const canChooseRole = role === 'admin'
 
@@ -41,26 +39,6 @@ export function InviteStaffForm({ role, staffTypes }: { role: Role; staffTypes: 
           />
         </div>
       </div>
-      {staffTypes.length > 0 && (
-        <div className="space-y-1">
-          <label htmlFor="staff_type_id" className="text-sm font-medium">
-            Staff type
-          </label>
-          <select
-            id="staff_type_id"
-            name="staff_type_id"
-            defaultValue=""
-            className="w-full rounded-md border border-black/20 px-3 py-2 sm:w-auto"
-          >
-            <option value="">None</option>
-            {staffTypes.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
       {canChooseRole ? (
         <div className="space-y-1">
           <label htmlFor="role" className="text-sm font-medium">
