@@ -162,8 +162,15 @@ export async function setStaffPassword(
     return { error: 'Password must be at least 8 characters.' }
   }
 
+  // email_confirm is included so this always works in one step even if the
+  // person never clicked a working invite/reset link before - otherwise
+  // Supabase silently keeps blocking sign-in on the unconfirmed email even
+  // after a password is set, which looks identical to a wrong password.
   const adminClient = createAdminClient()
-  const { error } = await adminClient.auth.admin.updateUserById(staffId, { password })
+  const { error } = await adminClient.auth.admin.updateUserById(staffId, {
+    password,
+    email_confirm: true,
+  })
 
   if (error) return { error: error.message }
   return { success: true }
