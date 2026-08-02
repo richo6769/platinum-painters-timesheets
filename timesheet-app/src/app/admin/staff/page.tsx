@@ -23,13 +23,14 @@ export default async function StaffPage() {
   const canEdit = profile.role === 'admin'
 
   const supabase = await createClient()
-  const [{ data: staff }, { data: authUsers }, { data: entryRows }] = await Promise.all([
+  const [{ data: staff }, { data: authUsers }, { data: entryRows }, { data: staffTypes }] = await Promise.all([
     supabase
       .from('profiles')
       .select('id, full_name, email, role, is_active, staff_types(name)')
       .order('full_name'),
     createAdminClient().auth.admin.listUsers(),
     supabase.from('timesheet_entries').select('user_id'),
+    supabase.from('staff_types').select('id, name').eq('is_active', true).order('name'),
   ])
 
   const neverSignedIn = new Set(
@@ -58,7 +59,7 @@ export default async function StaffPage() {
         </p>
       </div>
 
-      <InviteStaffForm role={profile.role} />
+      <InviteStaffForm role={profile.role} staffTypes={staffTypes ?? []} />
 
       <StaffList
         title="Active staff"

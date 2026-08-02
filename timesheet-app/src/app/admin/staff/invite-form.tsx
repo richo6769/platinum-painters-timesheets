@@ -4,7 +4,9 @@ import { useActionState } from 'react'
 import { inviteStaff } from '@/lib/actions/staff'
 import type { Role } from '@/lib/supabase/profile'
 
-export function InviteStaffForm({ role }: { role: Role }) {
+type StaffType = { id: string; name: string }
+
+export function InviteStaffForm({ role, staffTypes }: { role: Role; staffTypes: StaffType[] }) {
   const [state, action, pending] = useActionState(inviteStaff, undefined)
   const canChooseRole = role === 'admin'
 
@@ -53,6 +55,11 @@ export function InviteStaffForm({ role }: { role: Role }) {
             <option value="painter">Painter</option>
             <option value="supervisor">Supervisor</option>
             <option value="admin">Admin</option>
+            {staffTypes.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
           </select>
         </div>
       ) : (

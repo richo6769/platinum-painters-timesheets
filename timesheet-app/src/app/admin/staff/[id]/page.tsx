@@ -56,34 +56,19 @@ export default async function EditStaffPage({
           <select
             id="role"
             name="role"
-            defaultValue={person.role}
+            defaultValue={person.staff_type_id ?? person.role}
             className="w-full rounded-md border border-black/20 px-3 py-2 sm:w-auto"
           >
             <option value="painter">Painter</option>
             <option value="supervisor">Supervisor</option>
             <option value="admin">Admin</option>
+            {(staffTypes ?? []).map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
           </select>
         </div>
-        {(staffTypes ?? []).length > 0 && (
-          <div className="space-y-1">
-            <label htmlFor="staff_type_id" className="text-sm font-medium">
-              Staff type
-            </label>
-            <select
-              id="staff_type_id"
-              name="staff_type_id"
-              defaultValue={person.staff_type_id ?? ''}
-              className="w-full rounded-md border border-black/20 px-3 py-2 sm:w-auto"
-            >
-              <option value="">None</option>
-              {(staffTypes ?? []).map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
         <button
           type="submit"
           className="rounded-md bg-black px-4 py-2 text-sm text-white"

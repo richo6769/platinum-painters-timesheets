@@ -21,9 +21,6 @@ export async function inviteStaff(
   const email = formData.get('email')
   const full_name = formData.get('full_name')
   const submittedRole = formData.get('role')
-  const submittedStaffTypeId = formData.get('staff_type_id')
-  const staffTypeId =
-    typeof submittedStaffTypeId === 'string' && submittedStaffTypeId ? submittedStaffTypeId : null
 
   if (typeof email !== 'string' || !email.trim()) {
     return { error: 'Email is required.' }
@@ -32,16 +29,28 @@ export async function inviteStaff(
     return { error: 'Name is required.' }
   }
 
-  // Supervisors can only ever create Painter accounts, regardless of what
-  // the form submits. Same for anyone given a staff type (Contractor,
-  // Apprentice, etc.) - that's a job classification, not a permission
-  // grant, so it never carries Admin/Supervisor access.
-  const role: Role =
-    caller.role === 'supervisor' || staffTypeId
-      ? 'painter'
-      : VALID_ROLES.includes(submittedRole as Role)
-        ? (submittedRole as Role)
-        : 'painter'
+  // The Role dropdown offers admin/supervisor/painter plus every active
+  // staff type (Contractor, Apprentice, etc.) as a single merged list.
+  // Picking a staff type still only ever grants Painter-level access - it's
+  // a job classification, not a permission. Supervisors can only ever
+  // create Painter accounts, regardless of what the form submits.
+  let role: Role = 'painter'
+  let staffTypeId: string | null = null
+
+  if (caller.role !== 'supervisor' && typeof submittedRole === 'string') {
+    if (VALID_ROLES.includes(submittedRole as Role)) {
+      role = submittedRole as Role
+    } else if (submittedRole) {
+      const supabase = await createClient()
+      const { data: staffType } = await supabase
+        .from('staff_types')
+        .select('id')
+        .eq('id', submittedRole)
+        .eq('is_active', true)
+        .maybeSingle()
+      if (staffType) staffTypeId = staffType.id
+    }
+  }
 
   const adminClient = createAdminClient()
   const { data, error } = await adminClient.auth.admin.inviteUserByEmail(email.trim(), {
@@ -70,20 +79,29 @@ export async function updateStaff(staffId: string, formData: FormData) {
 
   const full_name = formData.get('full_name')
   const submittedRole = formData.get('role')
-  const submittedStaffTypeId = formData.get('staff_type_id')
-  const staffTypeId =
-    typeof submittedStaffTypeId === 'string' && submittedStaffTypeId ? submittedStaffTypeId : null
-  // A staff type is a job classification, not a permission grant - it
-  // never carries Admin/Supervisor access.
-  const role: Role = staffTypeId
-    ? 'painter'
-    : VALID_ROLES.includes(submittedRole as Role)
-      ? (submittedRole as Role)
-      : 'painter'
 
   if (typeof full_name !== 'string' || !full_name.trim()) return
 
   const supabase = await createClient()
+
+  // Same merged Role dropdown as invite: admin/supervisor/painter, or an
+  // active staff type id (which always resolves to Painter-level access).
+  let role: Role = 'painter'
+  let staffTypeId: string | null = null
+  if (typeof submittedRole === 'string') {
+    if (VALID_ROLES.includes(submittedRole as Role)) {
+      role = submittedRole as Role
+    } else if (submittedRole) {
+      const { data: staffType } = await supabase
+        .from('staff_types')
+        .select('id')
+        .eq('id', submittedRole)
+        .eq('is_active', true)
+        .maybeSingle()
+      if (staffType) staffTypeId = staffType.id
+    }
+  }
+
   await supabase
     .from('profiles')
     .update({
