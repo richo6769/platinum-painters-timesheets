@@ -91,7 +91,7 @@ export default async function ClockPage() {
       <p className="text-sm text-black/60">Signed in as {profile.full_name}</p>
       <ClockWidget sites={sites} openEntry={openEntry} />
       <div className="flex flex-wrap items-center justify-center gap-2">
-        {profile.role === 'admin' && (
+        {(profile.role === 'admin' || profile.role === 'supervisor') && (
           <Link
             href="/admin"
             className="rounded-lg bg-gray-300 px-3 py-1.5 text-xs font-medium text-gray-800 transition-colors hover:bg-gray-400"
