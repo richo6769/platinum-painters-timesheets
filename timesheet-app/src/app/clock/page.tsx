@@ -37,28 +37,37 @@ export default async function ClockPage() {
   const profile = await getCurrentProfile()
   const supabase = await createClient()
 
-  const [{ data: siteRows }, { data: openEntryRow }, { data: acknowledgements }] = await Promise.all([
-    supabase
-      .from('sites')
-      .select('id, name, extent_of_work_filename, safety_plan_filename, customers(name)')
-      .eq('is_active', true)
-      .order('name')
-      .returns<SiteRow[]>(),
-    supabase
-      .from('timesheet_entries')
-      .select(
-        'id, clock_in_at, sites(id, name, extent_of_work_filename, safety_plan_filename, customers(name))'
-      )
-      .eq('user_id', profile.id)
-      .is('clock_out_at', null)
-      .maybeSingle<OpenEntryRow>(),
-    supabase
-      .from('site_safety_acknowledgements')
-      .select('site_id')
-      .eq('user_id', profile.id),
-  ])
+  const [{ data: siteRows }, { data: openEntryRow }, { data: acknowledgements }, { data: extraDocRows }] =
+    await Promise.all([
+      supabase
+        .from('sites')
+        .select('id, name, extent_of_work_filename, safety_plan_filename, customers(name)')
+        .eq('is_active', true)
+        .order('name')
+        .returns<SiteRow[]>(),
+      supabase
+        .from('timesheet_entries')
+        .select(
+          'id, clock_in_at, sites(id, name, extent_of_work_filename, safety_plan_filename, customers(name))'
+        )
+        .eq('user_id', profile.id)
+        .is('clock_out_at', null)
+        .maybeSingle<OpenEntryRow>(),
+      supabase
+        .from('site_safety_acknowledgements')
+        .select('site_id')
+        .eq('user_id', profile.id),
+      supabase.from('site_documents').select('id, site_id, name').order('created_at'),
+    ])
 
   const acknowledgedSiteIds = new Set((acknowledgements ?? []).map((a) => a.site_id as string))
+
+  const extraDocsBySite = new Map<string, { id: string; name: string }[]>()
+  for (const doc of extraDocRows ?? []) {
+    const list = extraDocsBySite.get(doc.site_id) ?? []
+    list.push({ id: doc.id, name: doc.name })
+    extraDocsBySite.set(doc.site_id, list)
+  }
 
   const sites = (siteRows ?? []).map((s) => ({
     id: s.id,
@@ -66,6 +75,7 @@ export default async function ClockPage() {
     hasExtentOfWork: Boolean(s.extent_of_work_filename),
     hasSafetyPlan: Boolean(s.safety_plan_filename),
     safetyAcknowledged: acknowledgedSiteIds.has(s.id),
+    extraDocuments: extraDocsBySite.get(s.id) ?? [],
   }))
 
   const openEntrySite = openEntryRow?.sites
@@ -82,6 +92,7 @@ export default async function ClockPage() {
         site_name: openEntrySite?.name ?? 'Site',
         hasExtentOfWork: Boolean(openEntrySite?.extent_of_work_filename),
         hasSafetyPlan: Boolean(openEntrySite?.safety_plan_filename),
+        extraDocuments: openEntrySite ? (extraDocsBySite.get(openEntrySite.id) ?? []) : [],
       }
     : null
 

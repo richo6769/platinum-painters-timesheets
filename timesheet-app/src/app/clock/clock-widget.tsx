@@ -4,12 +4,14 @@ import { useEffect, useState, useTransition } from 'react'
 import { clockIn, clockOut } from '@/lib/actions/timesheet'
 import { getDeviceId, getDeviceLabel } from '@/lib/deviceId'
 
+type ExtraDocument = { id: string; name: string }
 type Site = {
   id: string
   label: string
   hasExtentOfWork: boolean
   hasSafetyPlan: boolean
   safetyAcknowledged: boolean
+  extraDocuments: ExtraDocument[]
 }
 type OpenEntry = {
   id: string
@@ -18,6 +20,7 @@ type OpenEntry = {
   site_name: string
   hasExtentOfWork: boolean
   hasSafetyPlan: boolean
+  extraDocuments: ExtraDocument[]
 }
 type Coords = { lat: number | null; lng: number | null }
 
@@ -173,28 +176,39 @@ export function ClockWidget({
       <div className="w-full max-w-sm space-y-4">
         <p className="text-center text-sm text-black/60">{openEntry.site_name}</p>
 
-        {openEntry.site_id && (openEntry.hasExtentOfWork || openEntry.hasSafetyPlan) && (
-          <div className="flex gap-2">
-            {openEntry.hasExtentOfWork && (
-              <a
-                href={`/api/site-documents/${openEntry.site_id}/extent-of-work`}
-                target="_blank"
-                className="flex-1 rounded-md border border-black/20 px-3 py-2 text-center text-sm font-medium hover:bg-black/5"
-              >
-                Extent of Work
-              </a>
-            )}
-            {openEntry.hasSafetyPlan && (
-              <a
-                href={`/api/site-documents/${openEntry.site_id}/safety-plan`}
-                target="_blank"
-                className="flex-1 rounded-md border border-black/20 px-3 py-2 text-center text-sm font-medium hover:bg-black/5"
-              >
-                Safety Plan
-              </a>
-            )}
-          </div>
-        )}
+        {openEntry.site_id &&
+          (openEntry.hasExtentOfWork || openEntry.hasSafetyPlan || openEntry.extraDocuments.length > 0) && (
+            <div className="flex flex-wrap gap-2">
+              {openEntry.hasExtentOfWork && (
+                <a
+                  href={`/api/site-documents/${openEntry.site_id}/extent-of-work`}
+                  target="_blank"
+                  className="flex-1 rounded-md border border-black/20 px-3 py-2 text-center text-sm font-medium hover:bg-black/5"
+                >
+                  Extent of Work
+                </a>
+              )}
+              {openEntry.hasSafetyPlan && (
+                <a
+                  href={`/api/site-documents/${openEntry.site_id}/safety-plan`}
+                  target="_blank"
+                  className="flex-1 rounded-md border border-black/20 px-3 py-2 text-center text-sm font-medium hover:bg-black/5"
+                >
+                  Safety Plan
+                </a>
+              )}
+              {openEntry.extraDocuments.map((doc) => (
+                <a
+                  key={doc.id}
+                  href={`/api/site-documents/doc/${doc.id}`}
+                  target="_blank"
+                  className="flex-1 rounded-md border border-black/20 px-3 py-2 text-center text-sm font-medium hover:bg-black/5"
+                >
+                  {doc.name}
+                </a>
+              ))}
+            </div>
+          )}
 
         <div className="grid grid-cols-2 gap-4 rounded-lg border border-black/10 p-4 text-center">
           <div>
@@ -311,8 +325,11 @@ export function ClockWidget({
               ))}
             </select>
           </div>
-          {selectedSite && (selectedSite.hasExtentOfWork || selectedSite.hasSafetyPlan) && (
-            <div className="flex gap-2">
+          {selectedSite &&
+            (selectedSite.hasExtentOfWork ||
+              selectedSite.hasSafetyPlan ||
+              selectedSite.extraDocuments.length > 0) && (
+            <div className="flex flex-wrap gap-2">
               {selectedSite.hasExtentOfWork && (
                 <a
                   href={`/api/site-documents/${selectedSite.id}/extent-of-work`}
@@ -331,6 +348,16 @@ export function ClockWidget({
                   Safety Plan
                 </a>
               )}
+              {selectedSite.extraDocuments.map((doc) => (
+                <a
+                  key={doc.id}
+                  href={`/api/site-documents/doc/${doc.id}`}
+                  target="_blank"
+                  className="flex-1 rounded-md border border-black/20 px-3 py-2 text-sm font-medium hover:bg-black/5"
+                >
+                  {doc.name}
+                </a>
+              ))}
             </div>
           )}
           {needsSafetyAck && (

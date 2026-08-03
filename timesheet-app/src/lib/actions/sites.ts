@@ -140,3 +140,84 @@ export async function setSiteActive(siteId: string, isActive: boolean) {
 
   revalidatePath('/admin/sites')
 }
+
+// Only for sites with zero timesheet entries - anyone with logged hours
+// needs to stay, since deleting cascades and would wipe that history. The
+// UI only offers this for already-archived sites, same pattern as
+// deleteCustomer/deleteStaff.
+export async function deleteSite(siteId: string) {
+  await requireAdmin()
+
+  const supabase = await createClient()
+  const { count } = await supabase
+    .from('timesheet_entries')
+    .select('id', { count: 'exact', head: true })
+    .eq('site_id', siteId)
+
+  if ((count ?? 0) > 0) return
+
+  await supabase.storage.from('site-documents').remove([
+    siteDocumentPath(siteId, 'extent-of-work'),
+    siteDocumentPath(siteId, 'safety-plan'),
+  ])
+  const { data: extraDocs } = await supabase
+    .from('site_documents')
+    .select('storage_path')
+    .eq('site_id', siteId)
+  if (extraDocs && extraDocs.length > 0) {
+    await supabase.storage.from('site-documents').remove(extraDocs.map((d) => d.storage_path))
+  }
+
+  await supabase.from('sites').delete().eq('id', siteId)
+
+  revalidatePath('/admin/sites')
+}
+
+// Any number of additional named documents per site, on top of the two
+// fixed ones (Extent of Work, Site Safety Plan) - no default name, admin
+// picks whatever label makes sense (e.g. "Council Consent", "Colour Schedule").
+export async function addSiteDocument(siteId: string, formData: FormData) {
+  await requireAdminOrSupervisor()
+
+  const name = formData.get('name')
+  const file = formData.get('file')
+
+  if (typeof name !== 'string' || !name.trim()) return
+  if (!(file instanceof File) || file.size === 0) return
+  if (file.type !== 'application/pdf') return
+  if (file.size > MAX_DOCUMENT_BYTES) return
+
+  const supabase = await createClient()
+  const storagePath = `${siteId}/extra/${crypto.randomUUID()}.pdf`
+
+  const { error: uploadError } = await supabase.storage
+    .from('site-documents')
+    .upload(storagePath, file, { contentType: 'application/pdf' })
+  if (uploadError) return
+
+  await supabase.from('site_documents').insert({
+    site_id: siteId,
+    name: name.trim(),
+    storage_path: storagePath,
+  })
+
+  revalidatePath(`/admin/sites/${siteId}`)
+}
+
+export async function deleteSiteDocument(documentId: string, siteId: string) {
+  await requireAdmin()
+
+  const supabase = await createClient()
+  const { data: doc } = await supabase
+    .from('site_documents')
+    .select('storage_path')
+    .eq('id', documentId)
+    .single()
+
+  if (doc) {
+    await supabase.storage.from('site-documents').remove([doc.storage_path])
+    await supabase.from('site_documents').delete().eq('id', documentId)
+  }
+
+  revalidatePath(`/admin/sites/${siteId}`)
+}

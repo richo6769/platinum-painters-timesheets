@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { createSite, setSiteActive } from '@/lib/actions/sites'
+import { createSite, setSiteActive, deleteSite } from '@/lib/actions/sites'
 import { getCurrentProfile } from '@/lib/supabase/profile'
 
 type SiteRow = {
@@ -11,6 +11,7 @@ type SiteRow = {
   extent_of_work_filename: string | null
   safety_plan_filename: string | null
   customers: { name: string } | { name: string }[] | null
+  entryCount: number
 }
 
 export default async function SitesPage() {
@@ -18,7 +19,7 @@ export default async function SitesPage() {
   const canEdit = profile.role === 'admin'
 
   const supabase = await createClient()
-  const [{ data: sites }, { data: customers }] = await Promise.all([
+  const [{ data: sites }, { data: customers }, { data: entryRows }] = await Promise.all([
     supabase
       .from('sites')
       .select(
@@ -31,9 +32,18 @@ export default async function SitesPage() {
       .select('id, name')
       .eq('is_active', true)
       .order('name'),
+    supabase.from('timesheet_entries').select('site_id'),
   ])
 
-  const siteList = (sites ?? []) as SiteRow[]
+  const entryCounts = new Map<string, number>()
+  for (const row of entryRows ?? []) {
+    entryCounts.set(row.site_id, (entryCounts.get(row.site_id) ?? 0) + 1)
+  }
+
+  const siteList = (sites ?? []).map((s) => ({
+    ...s,
+    entryCount: entryCounts.get(s.id) ?? 0,
+  })) as SiteRow[]
   const active = siteList.filter((s) => s.is_active)
   const archived = siteList.filter((s) => !s.is_active)
 
@@ -204,11 +214,20 @@ function SiteList({
                 )}
               </div>
               {canEdit && (
-                <form action={setSiteActive.bind(null, site.id, !site.is_active)}>
-                  <button type="submit" className="text-sm underline shrink-0">
-                    {site.is_active ? 'Archive' : 'Restore'}
-                  </button>
-                </form>
+                <div className="flex shrink-0 items-center gap-3">
+                  <form action={setSiteActive.bind(null, site.id, !site.is_active)}>
+                    <button type="submit" className="text-sm underline">
+                      {site.is_active ? 'Archive' : 'Restore'}
+                    </button>
+                  </form>
+                  {!site.is_active && site.entryCount === 0 && (
+                    <form action={deleteSite.bind(null, site.id)}>
+                      <button type="submit" className="text-sm text-red-600 underline">
+                        Delete
+                      </button>
+                    </form>
+                  )}
+                </div>
               )}
             </li>
           )

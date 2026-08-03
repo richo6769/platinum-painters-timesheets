@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { updateSite } from '@/lib/actions/sites'
+import { updateSite, addSiteDocument, deleteSiteDocument } from '@/lib/actions/sites'
 import { requireAdmin } from '@/lib/authGuards'
 
 export default async function EditSitePage({
@@ -13,7 +13,7 @@ export default async function EditSitePage({
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: site }, { data: customers }] = await Promise.all([
+  const [{ data: site }, { data: customers }, { data: extraDocs }] = await Promise.all([
     supabase
       .from('sites')
       .select(
@@ -22,6 +22,11 @@ export default async function EditSitePage({
       .eq('id', id)
       .single(),
     supabase.from('customers').select('id, name').order('name'),
+    supabase
+      .from('site_documents')
+      .select('id, name')
+      .eq('site_id', id)
+      .order('created_at'),
   ])
 
   if (!site) {
@@ -108,6 +113,71 @@ export default async function EditSitePage({
           Save changes
         </button>
       </form>
+
+      <div className="space-y-3 border-t border-black/10 pt-4">
+        <h2 className="font-medium">Additional documents</h2>
+        <p className="text-sm text-black/60">
+          Any other PDFs for this site - name them whatever makes sense.
+        </p>
+
+        {(extraDocs ?? []).length > 0 && (
+          <ul className="divide-y divide-black/10 rounded-lg border border-black/10">
+            {(extraDocs ?? []).map((doc) => (
+              <li key={doc.id} className="flex items-center justify-between gap-3 p-3 text-sm">
+                <a
+                  href={`/api/site-documents/doc/${doc.id}`}
+                  target="_blank"
+                  className="underline"
+                >
+                  {doc.name}
+                </a>
+                <form action={deleteSiteDocument.bind(null, doc.id, site.id)}>
+                  <button type="submit" className="text-sm text-red-600 underline">
+                    Delete
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <form
+          action={addSiteDocument.bind(null, site.id)}
+          className="flex flex-col gap-2 sm:flex-row sm:items-end"
+        >
+          <div className="flex-1 space-y-1">
+            <label htmlFor="doc_name" className="text-sm font-medium">
+              Name
+            </label>
+            <input
+              id="doc_name"
+              name="name"
+              placeholder="e.g. Council Consent"
+              required
+              className="w-full rounded-md border border-black/20 px-3 py-2 text-sm"
+            />
+          </div>
+          <div className="flex-1 space-y-1">
+            <label htmlFor="doc_file" className="text-sm font-medium">
+              File (PDF)
+            </label>
+            <input
+              id="doc_file"
+              name="file"
+              type="file"
+              accept="application/pdf"
+              required
+              className="w-full rounded-md border border-black/20 px-3 py-2 text-sm"
+            />
+          </div>
+          <button
+            type="submit"
+            className="rounded-md border border-black/20 px-4 py-2 text-sm font-medium hover:bg-black/5"
+          >
+            Add document
+          </button>
+        </form>
+      </div>
     </div>
   )
 }
