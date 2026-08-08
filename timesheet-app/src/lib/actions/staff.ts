@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAdmin, requireAdminOrSupervisor } from '@/lib/authGuards'
-import { SITE_URL } from '@/lib/siteUrl'
+import { sendAuthEmail } from '@/lib/email/authEmails'
 import type { Role } from '@/lib/supabase/profile'
 
 const VALID_ROLES: Role[] = ['admin', 'supervisor', 'painter']
@@ -52,22 +52,18 @@ export async function inviteStaff(
     }
   }
 
-  const adminClient = createAdminClient()
-  const { data, error } = await adminClient.auth.admin.inviteUserByEmail(email.trim(), {
-    data: { full_name: full_name.trim() },
-    redirectTo: `${SITE_URL}/reset-password`,
-  })
+  const { error, userId } = await sendAuthEmail(email.trim(), 'invite', full_name.trim())
 
   if (error) {
-    return { error: error.message }
+    return { error }
   }
 
-  if ((role !== 'painter' || staffTypeId) && data.user) {
+  if ((role !== 'painter' || staffTypeId) && userId) {
     const supabase = await createClient()
     const update: { role?: Role; staff_type_id?: string | null } = {}
     if (role !== 'painter') update.role = role
     if (staffTypeId) update.staff_type_id = staffTypeId
-    await supabase.from('profiles').update(update).eq('id', data.user.id)
+    await supabase.from('profiles').update(update).eq('id', userId)
   }
 
   revalidatePath('/admin/staff')
@@ -133,11 +129,9 @@ export async function sendPasswordReset(
 
   if (!person) return { error: 'Staff member not found.' }
 
-  const { error } = await supabase.auth.resetPasswordForEmail(person.email, {
-    redirectTo: `${SITE_URL}/reset-password`,
-  })
+  const { error } = await sendAuthEmail(person.email, 'recovery')
 
-  if (error) return { error: error.message }
+  if (error) return { error }
   return { success: true }
 }
 
@@ -160,11 +154,9 @@ export async function resendInvite(
 
   if (!person) return { error: 'Staff member not found.' }
 
-  const { error } = await supabase.auth.resetPasswordForEmail(person.email, {
-    redirectTo: `${SITE_URL}/reset-password`,
-  })
+  const { error } = await sendAuthEmail(person.email, 'recovery')
 
-  if (error) return { error: error.message }
+  if (error) return { error }
   return { success: true }
 }
 

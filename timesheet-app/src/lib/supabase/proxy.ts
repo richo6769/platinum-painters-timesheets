@@ -49,7 +49,9 @@ export async function updateSession(request: NextRequest) {
   // link's token is only exchanged for a session client-side (via the URL
   // hash), which this server-side check can't see yet on first load - and
   // an existing session shouldn't bounce someone away from it either.
-  const isAlwaysPublic = path === '/reset-password'
+  // /accept-invite is the same story, one step earlier - it hasn't
+  // exchanged anything yet, it's the page that does that on a real click.
+  const isAlwaysPublic = path === '/reset-password' || path === '/accept-invite'
   const isPublicWhenLoggedOut = path === '/login'
 
   if (!user && !isAlwaysPublic && !isPublicWhenLoggedOut) {
