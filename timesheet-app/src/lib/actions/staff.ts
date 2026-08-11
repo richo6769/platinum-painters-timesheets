@@ -6,11 +6,12 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAdmin, requireAdminOrSupervisor } from '@/lib/authGuards'
 import { sendAuthEmail } from '@/lib/email/authEmails'
+import { SITE_URL } from '@/lib/siteUrl'
 import type { Role } from '@/lib/supabase/profile'
 
 const VALID_ROLES: Role[] = ['admin', 'supervisor', 'painter']
 
-export type InviteStaffState = { error?: string } | undefined
+export type InviteStaffState = { error?: string; success?: string } | undefined
 
 export async function inviteStaff(
   _prevState: InviteStaffState,
@@ -21,12 +22,16 @@ export async function inviteStaff(
   const email = formData.get('email')
   const full_name = formData.get('full_name')
   const submittedRole = formData.get('role')
+  const password = formData.get('password')
 
   if (typeof email !== 'string' || !email.trim()) {
     return { error: 'Email is required.' }
   }
   if (typeof full_name !== 'string' || !full_name.trim()) {
     return { error: 'Name is required.' }
+  }
+  if (typeof password === 'string' && password && password.length < 8) {
+    return { error: 'Password must be at least 8 characters.' }
   }
 
   // The Role dropdown offers admin/supervisor/painter plus every active
@@ -52,10 +57,25 @@ export async function inviteStaff(
     }
   }
 
-  const { error, userId } = await sendAuthEmail(email.trim(), 'invite', full_name.trim())
+  let userId: string | undefined
 
-  if (error) {
-    return { error }
+  // Setting a password directly skips the invite email entirely - useful
+  // while email delivery is unreliable (or just to hand someone their
+  // login on the spot). They can log in immediately with what's set here.
+  if (typeof password === 'string' && password) {
+    const adminClient = createAdminClient()
+    const { data, error } = await adminClient.auth.admin.createUser({
+      email: email.trim(),
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: full_name.trim() },
+    })
+    if (error) return { error: error.message }
+    userId = data.user?.id
+  } else {
+    const { error, userId: invitedId } = await sendAuthEmail(email.trim(), 'invite', full_name.trim())
+    if (error) return { error }
+    userId = invitedId
   }
 
   if ((role !== 'painter' || staffTypeId) && userId) {
@@ -67,6 +87,13 @@ export async function inviteStaff(
   }
 
   revalidatePath('/admin/staff')
+
+  if (typeof password === 'string' && password) {
+    return {
+      success: `Account created. Have them sign in at ${SITE_URL}/login with ${email.trim()} and the password you set.`,
+    }
+  }
+
   redirect('/admin/staff')
 }
 

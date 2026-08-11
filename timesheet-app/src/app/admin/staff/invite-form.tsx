@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { inviteStaff } from '@/lib/actions/staff'
 import type { Role } from '@/lib/supabase/profile'
 
@@ -8,13 +8,16 @@ type StaffType = { id: string; name: string }
 
 export function InviteStaffForm({ role, staffTypes }: { role: Role; staffTypes: StaffType[] }) {
   const [state, action, pending] = useActionState(inviteStaff, undefined)
+  const [setPasswordNow, setSetPasswordNow] = useState(false)
   const canChooseRole = role === 'admin'
 
   return (
     <form action={action} className="space-y-3 rounded-lg border border-black/10 p-4">
-      <h2 className="font-medium">Invite a staff member</h2>
+      <h2 className="font-medium">Add a staff member</h2>
       <p className="text-sm text-black/60">
-        They&apos;ll get an email to set their own password.
+        {setPasswordNow
+          ? "You'll set their password now and can hand it to them directly - no email sent."
+          : "They'll get an email to set their own password."}
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
@@ -65,13 +68,43 @@ export function InviteStaffForm({ role, staffTypes }: { role: Role; staffTypes: 
       ) : (
         <p className="text-sm text-black/60">Role: Painter</p>
       )}
+
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={setPasswordNow}
+          onChange={(e) => setSetPasswordNow(e.target.checked)}
+        />
+        Set their password myself instead of emailing an invite
+      </label>
+
+      {setPasswordNow && (
+        <div className="space-y-1">
+          <label htmlFor="password" className="text-sm font-medium">
+            Password
+          </label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            minLength={8}
+            required={setPasswordNow}
+            autoComplete="new-password"
+            placeholder="At least 8 characters"
+            className="w-full rounded-md border border-black/20 px-3 py-2"
+          />
+        </div>
+      )}
+
       {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+      {state?.success && <p className="text-sm text-green-700">{state.success}</p>}
+
       <button
         type="submit"
         disabled={pending}
         className="rounded-md bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
       >
-        {pending ? 'Sending invite…' : 'Send invite'}
+        {pending ? 'Saving…' : setPasswordNow ? 'Create account' : 'Send invite'}
       </button>
     </form>
   )
