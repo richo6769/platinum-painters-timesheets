@@ -38,14 +38,17 @@ export default async function LeavePage() {
       .select('id, leave_type, start_date, end_date, notes, profiles(full_name)')
       .order('start_date', { ascending: false })
       .returns<LeaveRow[]>(),
-    supabase.from('staff_schedule').select('user_id, start_time, end_time'),
+    supabase.from('staff_schedule').select('user_id, start_time, end_time, works_saturday, works_sunday'),
   ])
 
   const upcoming = (leave ?? []).filter((l) => l.end_date >= today)
   const past = (leave ?? []).filter((l) => l.end_date < today)
 
   const scheduleByUser = new Map(
-    (schedules ?? []).map((s) => [s.user_id, { start: s.start_time, end: s.end_time }])
+    (schedules ?? []).map((s) => [
+      s.user_id,
+      { start: s.start_time, end: s.end_time, sat: s.works_saturday, sun: s.works_sunday },
+    ])
   )
 
   return (
@@ -140,8 +143,9 @@ export default async function LeavePage() {
         <div>
           <h2 className="font-medium">Start &amp; finish times</h2>
           <p className="text-sm text-black/60">
-            Admin/supervisor-only - staff can&apos;t see or change this. Used by clock-in/out
-            reminders.
+            Admin/supervisor-only - staff can&apos;t see or change this. Everyone&apos;s assumed
+            Monday-Friday (public holidays skipped automatically) unless you tick that they also
+            work a Saturday or Sunday. Used by clock-in/out reminders.
           </p>
         </div>
         <ul className="divide-y divide-black/10 rounded-lg border border-black/10">
@@ -159,7 +163,7 @@ export default async function LeavePage() {
                     <input
                       name="start_time"
                       type="time"
-                      defaultValue={current?.start ?? '07:00'}
+                      defaultValue={current?.start ?? '07:30'}
                       className="rounded-md border border-black/20 px-2 py-1"
                     />
                   </label>
@@ -168,9 +172,25 @@ export default async function LeavePage() {
                     <input
                       name="end_time"
                       type="time"
-                      defaultValue={current?.end ?? '15:30'}
+                      defaultValue={current?.end ?? '16:00'}
                       className="rounded-md border border-black/20 px-2 py-1"
                     />
+                  </label>
+                  <label className="flex items-center gap-1 text-sm text-black/60">
+                    <input
+                      type="checkbox"
+                      name="works_saturday"
+                      defaultChecked={current?.sat ?? false}
+                    />
+                    Sat
+                  </label>
+                  <label className="flex items-center gap-1 text-sm text-black/60">
+                    <input
+                      type="checkbox"
+                      name="works_sunday"
+                      defaultChecked={current?.sun ?? false}
+                    />
+                    Sun
                   </label>
                   <button type="submit" className="text-sm underline">
                     Save
