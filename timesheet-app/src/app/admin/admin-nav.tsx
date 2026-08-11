@@ -13,6 +13,7 @@ const links = [
   { href: '/admin/customers', label: 'Customers' },
   { href: '/admin/sites', label: 'Sites' },
   { href: '/admin/staff', label: 'Staff' },
+  { href: '/admin/leave', label: 'Leave' },
   { href: '/admin/staff-types', label: 'Manage Staff Types', adminOnly: true },
 ]
 
