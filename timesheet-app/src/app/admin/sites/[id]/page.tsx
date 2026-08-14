@@ -1,14 +1,15 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { updateSite, addSiteDocument, deleteSiteDocument } from '@/lib/actions/sites'
-import { requireAdmin } from '@/lib/authGuards'
+import { requireAdminOrSupervisor } from '@/lib/authGuards'
 
 export default async function EditSitePage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
-  await requireAdmin()
+  const profile = await requireAdminOrSupervisor()
+  const canEdit = profile.role === 'admin'
 
   const { id } = await params
   const supabase = await createClient()
@@ -35,78 +36,108 @@ export default async function EditSitePage({
 
   return (
     <div className="max-w-lg space-y-4">
-      <h1 className="text-2xl font-semibold">Edit site</h1>
+      <h1 className="text-2xl font-semibold">{canEdit ? 'Edit site' : site.name}</h1>
 
-      <form id="site-form" action={updateSite.bind(null, site.id)} className="space-y-3">
-        <div className="space-y-1">
-          <label htmlFor="customer_id" className="text-sm font-medium">
-            Customer
-          </label>
-          <select
-            id="customer_id"
-            name="customer_id"
-            defaultValue={site.customer_id}
-            required
-            className="w-full rounded-md border border-black/20 px-3 py-2"
-          >
-            {(customers ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="name" className="text-sm font-medium">
-            Site name
-          </label>
-          <input
-            id="name"
-            name="name"
-            defaultValue={site.name}
-            required
-            className="w-full rounded-md border border-black/20 px-3 py-2"
+      {canEdit ? (
+        <form id="site-form" action={updateSite.bind(null, site.id)} className="space-y-3">
+          <div className="space-y-1">
+            <label htmlFor="customer_id" className="text-sm font-medium">
+              Customer
+            </label>
+            <select
+              id="customer_id"
+              name="customer_id"
+              defaultValue={site.customer_id}
+              required
+              className="w-full rounded-md border border-black/20 px-3 py-2"
+            >
+              {(customers ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="name" className="text-sm font-medium">
+              Site name
+            </label>
+            <input
+              id="name"
+              name="name"
+              defaultValue={site.name}
+              required
+              className="w-full rounded-md border border-black/20 px-3 py-2"
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="address" className="text-sm font-medium">
+              Address (optional)
+            </label>
+            <input
+              id="address"
+              name="address"
+              defaultValue={site.address ?? ''}
+              className="w-full rounded-md border border-black/20 px-3 py-2"
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="contact_person" className="text-sm font-medium">
+              Contact person (optional)
+            </label>
+            <input
+              id="contact_person"
+              name="contact_person"
+              defaultValue={site.contact_person ?? ''}
+              className="w-full rounded-md border border-black/20 px-3 py-2"
+            />
+          </div>
+          <SiteDocumentField
+            kind="extent-of-work"
+            label="Extent of Work"
+            siteId={site.id}
+            currentFilename={site.extent_of_work_filename}
+            inputName="extent_of_work"
+            removeName="remove_extent_of_work"
+            canRemove={canEdit}
           />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="address" className="text-sm font-medium">
-            Address (optional)
-          </label>
-          <input
-            id="address"
-            name="address"
-            defaultValue={site.address ?? ''}
-            className="w-full rounded-md border border-black/20 px-3 py-2"
+          <SiteDocumentField
+            kind="safety-plan"
+            label="Site Safety Plan"
+            siteId={site.id}
+            currentFilename={site.safety_plan_filename}
+            inputName="safety_plan"
+            removeName="remove_safety_plan"
+            canRemove={canEdit}
           />
+        </form>
+      ) : (
+        <div className="space-y-3 rounded-lg border border-black/10 p-4 text-sm">
+          {site.address && <p className="text-black/60">{site.address}</p>}
+          {(site.extent_of_work_filename || site.safety_plan_filename) && (
+            <div className="flex gap-2">
+              {site.extent_of_work_filename && (
+                <a
+                  href={`/api/site-documents/${site.id}/extent-of-work`}
+                  target="_blank"
+                  className="rounded bg-black/5 px-2 py-1 underline"
+                >
+                  Extent of Work
+                </a>
+              )}
+              {site.safety_plan_filename && (
+                <a
+                  href={`/api/site-documents/${site.id}/safety-plan`}
+                  target="_blank"
+                  className="rounded bg-black/5 px-2 py-1 underline"
+                >
+                  Safety Plan
+                </a>
+              )}
+            </div>
+          )}
         </div>
-        <div className="space-y-1">
-          <label htmlFor="contact_person" className="text-sm font-medium">
-            Contact person (optional)
-          </label>
-          <input
-            id="contact_person"
-            name="contact_person"
-            defaultValue={site.contact_person ?? ''}
-            className="w-full rounded-md border border-black/20 px-3 py-2"
-          />
-        </div>
-        <SiteDocumentField
-          kind="extent-of-work"
-          label="Extent of Work"
-          siteId={site.id}
-          currentFilename={site.extent_of_work_filename}
-          inputName="extent_of_work"
-          removeName="remove_extent_of_work"
-        />
-        <SiteDocumentField
-          kind="safety-plan"
-          label="Site Safety Plan"
-          siteId={site.id}
-          currentFilename={site.safety_plan_filename}
-          inputName="safety_plan"
-          removeName="remove_safety_plan"
-        />
-      </form>
+      )}
 
       <div className="space-y-3 rounded-lg border border-black/10 p-4">
         <h2 className="font-medium">Additional documents</h2>
@@ -125,11 +156,13 @@ export default async function EditSitePage({
                 >
                   {doc.name}
                 </a>
-                <form action={deleteSiteDocument.bind(null, doc.id, site.id)}>
-                  <button type="submit" className="text-sm text-red-600 underline">
-                    Delete
-                  </button>
-                </form>
+                {canEdit && (
+                  <form action={deleteSiteDocument.bind(null, doc.id, site.id)}>
+                    <button type="submit" className="text-sm text-red-600 underline">
+                      Delete
+                    </button>
+                  </form>
+                )}
               </li>
             ))}
           </ul>
@@ -173,13 +206,15 @@ export default async function EditSitePage({
         </form>
       </div>
 
-      <button
-        type="submit"
-        form="site-form"
-        className="rounded-md bg-black px-4 py-2 text-sm text-white"
-      >
-        Save changes
-      </button>
+      {canEdit && (
+        <button
+          type="submit"
+          form="site-form"
+          className="rounded-md bg-black px-4 py-2 text-sm text-white"
+        >
+          Save changes
+        </button>
+      )}
     </div>
   )
 }
@@ -191,6 +226,7 @@ function SiteDocumentField({
   currentFilename,
   inputName,
   removeName,
+  canRemove,
 }: {
   kind: 'extent-of-work' | 'safety-plan'
   label: string
@@ -198,6 +234,7 @@ function SiteDocumentField({
   currentFilename: string | null
   inputName: string
   removeName: string
+  canRemove: boolean
 }) {
   return (
     <div className="space-y-1">
@@ -213,10 +250,12 @@ function SiteDocumentField({
           >
             {currentFilename}
           </a>
-          <label className="flex items-center gap-1 text-xs text-black/60">
-            <input type="checkbox" name={removeName} />
-            Remove
-          </label>
+          {canRemove && (
+            <label className="flex items-center gap-1 text-xs text-black/60">
+              <input type="checkbox" name={removeName} />
+              Remove
+            </label>
+          )}
         </div>
       )}
       <input

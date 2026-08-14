@@ -179,13 +179,9 @@ function SiteList({
           return (
             <li key={site.id} className="flex items-center justify-between gap-4 p-3">
               <div>
-                {canEdit ? (
-                  <Link href={`/admin/sites/${site.id}`} className="font-medium underline">
-                    {site.name}
-                  </Link>
-                ) : (
-                  <p className="font-medium">{site.name}</p>
-                )}
+                <Link href={`/admin/sites/${site.id}`} className="font-medium underline">
+                  {site.name}
+                </Link>
                 <p className="text-sm text-black/60">
                   {customer?.name ?? 'Unknown customer'}
                   {site.address ? ` — ${site.address}` : ''}
