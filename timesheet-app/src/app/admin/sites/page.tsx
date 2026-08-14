@@ -12,6 +12,7 @@ type SiteRow = {
   safety_plan_filename: string | null
   customers: { name: string } | { name: string }[] | null
   entryCount: number
+  extraDocuments: { id: string; name: string }[]
 }
 
 export default async function SitesPage() {
@@ -19,30 +20,40 @@ export default async function SitesPage() {
   const canEdit = profile.role === 'admin'
 
   const supabase = await createClient()
-  const [{ data: sites }, { data: customers }, { data: entryRows }] = await Promise.all([
-    supabase
-      .from('sites')
-      .select(
-        'id, name, address, is_active, extent_of_work_filename, safety_plan_filename, customers(name)'
-      )
-      .order('is_active', { ascending: false })
-      .order('name', { ascending: true }),
-    supabase
-      .from('customers')
-      .select('id, name')
-      .eq('is_active', true)
-      .order('name'),
-    supabase.from('timesheet_entries').select('site_id'),
-  ])
+  const [{ data: sites }, { data: customers }, { data: entryRows }, { data: extraDocRows }] =
+    await Promise.all([
+      supabase
+        .from('sites')
+        .select(
+          'id, name, address, is_active, extent_of_work_filename, safety_plan_filename, customers(name)'
+        )
+        .order('is_active', { ascending: false })
+        .order('name', { ascending: true }),
+      supabase
+        .from('customers')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name'),
+      supabase.from('timesheet_entries').select('site_id'),
+      supabase.from('site_documents').select('id, site_id, name').order('created_at'),
+    ])
 
   const entryCounts = new Map<string, number>()
   for (const row of entryRows ?? []) {
     entryCounts.set(row.site_id, (entryCounts.get(row.site_id) ?? 0) + 1)
   }
 
+  const extraDocsBySite = new Map<string, { id: string; name: string }[]>()
+  for (const doc of extraDocRows ?? []) {
+    const list = extraDocsBySite.get(doc.site_id) ?? []
+    list.push({ id: doc.id, name: doc.name })
+    extraDocsBySite.set(doc.site_id, list)
+  }
+
   const siteList = (sites ?? []).map((s) => ({
     ...s,
     entryCount: entryCounts.get(s.id) ?? 0,
+    extraDocuments: extraDocsBySite.get(s.id) ?? [],
   })) as SiteRow[]
   const active = siteList.filter((s) => s.is_active)
   const archived = siteList.filter((s) => !s.is_active)
@@ -186,8 +197,10 @@ function SiteList({
                   {customer?.name ?? 'Unknown customer'}
                   {site.address ? ` — ${site.address}` : ''}
                 </p>
-                {(site.extent_of_work_filename || site.safety_plan_filename) && (
-                  <p className="mt-1 flex gap-2 text-xs">
+                {(site.extent_of_work_filename ||
+                  site.safety_plan_filename ||
+                  site.extraDocuments.length > 0) && (
+                  <p className="mt-1 flex flex-wrap gap-2 text-xs">
                     {site.extent_of_work_filename && (
                       <a
                         href={`/api/site-documents/${site.id}/extent-of-work`}
@@ -206,6 +219,16 @@ function SiteList({
                         Safety Plan
                       </a>
                     )}
+                    {site.extraDocuments.map((doc) => (
+                      <a
+                        key={doc.id}
+                        href={`/api/site-documents/doc/${doc.id}`}
+                        target="_blank"
+                        className="rounded bg-black/5 px-2 py-0.5 underline"
+                      >
+                        {doc.name}
+                      </a>
+                    ))}
                   </p>
                 )}
               </div>
