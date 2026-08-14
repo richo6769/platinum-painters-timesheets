@@ -95,6 +95,50 @@ export default async function ActivityPage() {
         </p>
       </div>
 
+      {rows.length === 0 ? (
+        <p className="text-sm text-black/60">No one is currently clocked in.</p>
+      ) : (
+        <ul className="divide-y divide-black/10 rounded-lg border border-black/10">
+          {rows.map((row) => (
+            <li key={row.id} className="flex items-center justify-between gap-4 p-3">
+              <div>
+                <p className="font-medium">{row.name}</p>
+                <p className="text-sm text-black/60">
+                  {row.siteName}
+                  {row.customerName ? ` (${row.customerName})` : ''}
+                </p>
+                {row.deviceLabel && (
+                  <p className={`text-xs ${row.deviceShared ? 'font-medium text-red-600' : 'text-black/40'}`}>
+                    {row.deviceLabel}
+                    {row.deviceShared ? ' — also used by another active clock-in!' : ''}
+                  </p>
+                )}
+              </div>
+              <div className="text-right text-sm">
+                <p className="font-medium tabular-nums">{elapsedSince(row.since)}</p>
+                {row.mapUrl && (
+                  <a href={row.mapUrl} target="_blank" className="underline">
+                    Map
+                  </a>
+                )}
+                {canManage && (
+                  <form
+                    action={async () => {
+                      'use server'
+                      await adminClockOut(row.id)
+                    }}
+                  >
+                    <button type="submit" className="text-sm underline">
+                      Clock out
+                    </button>
+                  </form>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
       {canManage && (staff ?? []).length > 0 && (sites ?? []).length > 0 && (
         <form
           action={async (formData: FormData) => {
@@ -148,50 +192,6 @@ export default async function ActivityPage() {
             Clock in
           </button>
         </form>
-      )}
-
-      {rows.length === 0 ? (
-        <p className="text-sm text-black/60">No one is currently clocked in.</p>
-      ) : (
-        <ul className="divide-y divide-black/10 rounded-lg border border-black/10">
-          {rows.map((row) => (
-            <li key={row.id} className="flex items-center justify-between gap-4 p-3">
-              <div>
-                <p className="font-medium">{row.name}</p>
-                <p className="text-sm text-black/60">
-                  {row.siteName}
-                  {row.customerName ? ` (${row.customerName})` : ''}
-                </p>
-                {row.deviceLabel && (
-                  <p className={`text-xs ${row.deviceShared ? 'font-medium text-red-600' : 'text-black/40'}`}>
-                    {row.deviceLabel}
-                    {row.deviceShared ? ' — also used by another active clock-in!' : ''}
-                  </p>
-                )}
-              </div>
-              <div className="text-right text-sm">
-                <p className="font-medium tabular-nums">{elapsedSince(row.since)}</p>
-                {row.mapUrl && (
-                  <a href={row.mapUrl} target="_blank" className="underline">
-                    Map
-                  </a>
-                )}
-                {canManage && (
-                  <form
-                    action={async () => {
-                      'use server'
-                      await adminClockOut(row.id)
-                    }}
-                  >
-                    <button type="submit" className="text-sm underline">
-                      Clock out
-                    </button>
-                  </form>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
       )}
     </div>
   )
