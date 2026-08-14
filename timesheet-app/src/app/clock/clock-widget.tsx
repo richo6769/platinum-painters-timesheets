@@ -88,11 +88,9 @@ function useNow(active: boolean) {
 export function ClockWidget({
   sites,
   openEntry,
-  readOnly,
 }: {
   sites: Site[]
   openEntry: OpenEntry | null
-  readOnly?: boolean
 }) {
   const [siteId, setSiteId] = useState('')
   const selectedSite = sites.find((s) => s.id === siteId) ?? null
@@ -246,16 +244,10 @@ export function ClockWidget({
 
         {error && <p className="text-center text-sm text-red-600">{error}</p>}
 
-        {readOnly && (
-          <p className="text-center text-xs text-amber-700">
-            Clocking in/out is disabled while previewing.
-          </p>
-        )}
-
         {!stopped ? (
           <button
             onClick={handleStop}
-            disabled={pending || readOnly}
+            disabled={pending}
             className="w-full rounded-md bg-red-600 px-4 py-3 text-white disabled:opacity-50"
           >
             {pending ? 'Stopping…' : 'Stop'}
@@ -293,7 +285,7 @@ export function ClockWidget({
             )}
             <button
               onClick={handleSave}
-              disabled={pending || readOnly}
+              disabled={pending}
               className="w-full rounded-md bg-black px-4 py-3 text-white disabled:opacity-50"
             >
               {pending ? 'Saving…' : 'Save'}
@@ -382,14 +374,9 @@ export function ClockWidget({
             </label>
           )}
           {error && <p className="text-sm text-red-600">{error}</p>}
-          {readOnly && (
-            <p className="text-center text-xs text-amber-700">
-              Clocking in is disabled while previewing.
-            </p>
-          )}
           <button
             onClick={handleClockIn}
-            disabled={pending || readOnly || !siteId || (needsSafetyAck && !safetyChecked)}
+            disabled={pending || !siteId || (needsSafetyAck && !safetyChecked)}
             className="w-full rounded-md bg-black px-4 py-3 text-white disabled:opacity-50"
           >
             {pending ? 'Clocking in…' : 'Clock In'}

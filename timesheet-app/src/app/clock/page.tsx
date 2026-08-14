@@ -33,14 +33,8 @@ function customerName(relation: CustomerRelation): string | undefined {
   return Array.isArray(relation) ? relation[0]?.name : relation?.name
 }
 
-export default async function ClockPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-}) {
+export default async function ClockPage() {
   const profile = await getCurrentProfile()
-  const sp = await searchParams
-  const painterPreview = sp.preview === 'painter'
   const supabase = await createClient()
 
   const [{ data: siteRows }, { data: openEntryRow }, { data: acknowledgements }, { data: extraDocRows }] =
@@ -105,18 +99,10 @@ export default async function ClockPage({
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-6 p-4">
       <Image src="/logo.webp" alt="Platinum Painters" width={140} height={56} priority />
-      {painterPreview && (
-        <div className="flex items-center gap-3 rounded-md bg-amber-100 px-3 py-1.5 text-xs font-medium text-amber-800">
-          <span>Previewing what a Painter sees</span>
-          <Link href="/admin" className="underline">
-            Exit preview
-          </Link>
-        </div>
-      )}
       <p className="text-sm text-black/60">Signed in as {profile.full_name}</p>
-      <ClockWidget sites={sites} openEntry={openEntry} readOnly={painterPreview} />
+      <ClockWidget sites={sites} openEntry={openEntry} />
       <div className="flex flex-wrap items-center justify-center gap-2">
-        {!painterPreview && (profile.role === 'admin' || profile.role === 'supervisor') && (
+        {(profile.role === 'admin' || profile.role === 'supervisor') && (
           <Link
             href="/admin"
             className="rounded-lg bg-gray-300 px-3 py-1.5 text-xs font-medium text-gray-800 transition-colors hover:bg-gray-400"
