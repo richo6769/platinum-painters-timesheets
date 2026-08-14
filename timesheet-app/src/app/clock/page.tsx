@@ -106,12 +106,15 @@ export default async function ClockPage({
     <main className="flex flex-1 flex-col items-center justify-center gap-6 p-4">
       <Image src="/logo.webp" alt="Platinum Painters" width={140} height={56} priority />
       {painterPreview && (
-        <p className="rounded-md bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
-          Previewing what a Painter sees
-        </p>
+        <div className="flex items-center gap-3 rounded-md bg-amber-100 px-3 py-1.5 text-xs font-medium text-amber-800">
+          <span>Previewing what a Painter sees</span>
+          <Link href="/admin" className="underline">
+            Exit preview
+          </Link>
+        </div>
       )}
       <p className="text-sm text-black/60">Signed in as {profile.full_name}</p>
-      <ClockWidget sites={sites} openEntry={openEntry} />
+      <ClockWidget sites={sites} openEntry={openEntry} readOnly={painterPreview} />
       <div className="flex flex-wrap items-center justify-center gap-2">
         {!painterPreview && (profile.role === 'admin' || profile.role === 'supervisor') && (
           <Link
