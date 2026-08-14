@@ -1,12 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import type { Role } from '@/lib/supabase/profile'
 
 const links = [
   { href: '/admin', label: 'Dashboard' },
   { href: '/clock', label: 'Clock In/Out' },
+  { href: '/clock?preview=painter', label: 'Painter View' },
   { href: '/timesheet', label: 'Timesheet' },
   { href: '/admin/activity', label: 'Activity' },
   { href: '/admin/reports', label: 'Reports', adminOnly: true },
@@ -19,15 +20,20 @@ const links = [
 
 export function AdminNav({ role }: { role: Role }) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const isPainterPreview = searchParams.get('preview') === 'painter'
   const visibleLinks = links.filter((link) => !link.adminOnly || role === 'admin')
 
   return (
     <nav className="flex flex-col gap-2 p-3">
       {visibleLinks.map((link) => {
+        const [linkPath, linkQuery] = link.href.split('?')
         const active =
           link.href === '/admin'
             ? pathname === '/admin'
-            : pathname === link.href || pathname.startsWith(`${link.href}/`)
+            : linkPath === '/clock'
+              ? pathname === '/clock' && isPainterPreview === (linkQuery === 'preview=painter')
+              : pathname === link.href || pathname.startsWith(`${link.href}/`)
 
         return (
           <Link
