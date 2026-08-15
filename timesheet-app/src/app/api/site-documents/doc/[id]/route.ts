@@ -12,9 +12,13 @@ export async function GET(
   const supabase = await createClient()
   const { data: doc } = await supabase
     .from('site_documents')
-    .select('storage_path, sites(is_active)')
+    .select('name, storage_path, sites(is_active)')
     .eq('id', id)
-    .single<{ storage_path: string; sites: { is_active: boolean } | { is_active: boolean }[] | null }>()
+    .single<{
+      name: string
+      storage_path: string
+      sites: { is_active: boolean } | { is_active: boolean }[] | null
+    }>()
 
   if (!doc) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -25,13 +29,31 @@ export async function GET(
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  const { data: signed, error } = await supabase.storage
-    .from('site-documents')
-    .createSignedUrl(doc.storage_path, 60)
+  // Only admins get a directly downloadable link - everyone else gets the
+  // file streamed back inline, with no saveable URL to share or copy.
+  if (profile.role === 'admin') {
+    const { data: signed, error } = await supabase.storage
+      .from('site-documents')
+      .createSignedUrl(doc.storage_path, 60)
 
-  if (error || !signed) {
+    if (error || !signed) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+
+    return NextResponse.redirect(signed.signedUrl)
+  }
+
+  const { data: file, error } = await supabase.storage.from('site-documents').download(doc.storage_path)
+
+  if (error || !file) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  return NextResponse.redirect(signed.signedUrl)
+  return new NextResponse(file, {
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="${doc.name}.pdf"`,
+      'Cache-Control': 'no-store',
+    },
+  })
 }
