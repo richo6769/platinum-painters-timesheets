@@ -9,6 +9,7 @@ type Customer = {
   contact_person: string | null
   is_active: boolean
   siteCount: number
+  activeSiteCount: number
 }
 
 export default async function CustomersPage() {
@@ -22,17 +23,22 @@ export default async function CustomersPage() {
       .select('id, name, contact_person, is_active')
       .order('is_active', { ascending: false })
       .order('name', { ascending: true }),
-    supabase.from('sites').select('customer_id'),
+    supabase.from('sites').select('customer_id, is_active'),
   ])
 
   const siteCounts = new Map<string, number>()
+  const activeSiteCounts = new Map<string, number>()
   for (const row of siteRows ?? []) {
     siteCounts.set(row.customer_id, (siteCounts.get(row.customer_id) ?? 0) + 1)
+    if (row.is_active) {
+      activeSiteCounts.set(row.customer_id, (activeSiteCounts.get(row.customer_id) ?? 0) + 1)
+    }
   }
 
   const customerList = (customers ?? []).map((c) => ({
     ...c,
     siteCount: siteCounts.get(c.id) ?? 0,
+    activeSiteCount: activeSiteCounts.get(c.id) ?? 0,
   })) as Customer[]
   const active = customerList.filter((c) => c.is_active)
   const archived = customerList.filter((c) => !c.is_active)
@@ -126,6 +132,11 @@ function CustomerList({
               {customer.contact_person && (
                 <p className="text-sm text-black/60">{customer.contact_person}</p>
               )}
+              <p className="text-sm text-black/60">
+                {customer.activeSiteCount === 0
+                  ? 'No active sites'
+                  : `${customer.activeSiteCount} active site${customer.activeSiteCount === 1 ? '' : 's'}`}
+              </p>
             </div>
             {canEdit && (
               <div className="flex shrink-0 items-center gap-3">

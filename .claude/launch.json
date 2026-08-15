@@ -6,7 +6,7 @@
       "runtimeExecutable": "C:\\Windows\\System32\\cmd.exe",
       "runtimeArgs": [
         "/c",
-        "set PATH=C:\\Program Files\\nodejs;%PATH% && npm --prefix timesheet-app run dev"
+        "set PATH=C:\\Program Files\\nodejs;%PATH% && set NODE_OPTIONS=--use-system-ca && npm --prefix timesheet-app run dev"
       ],
       "port": 3000
     }
