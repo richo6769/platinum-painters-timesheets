@@ -71,8 +71,12 @@ export default async function LeavePage() {
             id="user_id"
             name="user_id"
             required
+            defaultValue=""
             className="w-full rounded-md border border-black/20 px-3 py-2"
           >
+            <option value="" disabled>
+              Select a staff member…
+            </option>
             {(staff ?? []).map((s) => (
               <option key={s.id} value={s.id}>
                 {s.full_name}

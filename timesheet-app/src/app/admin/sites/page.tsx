@@ -83,8 +83,12 @@ export default async function SitesPage() {
                 id="customer_id"
                 name="customer_id"
                 required
+                defaultValue=""
                 className="w-full rounded-md border border-black/20 px-3 py-2"
               >
+                <option value="" disabled>
+                  Select a customer…
+                </option>
                 {(customers ?? []).map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
