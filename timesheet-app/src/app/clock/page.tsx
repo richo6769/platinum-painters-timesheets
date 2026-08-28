@@ -116,6 +116,12 @@ export default async function ClockPage() {
         >
           My Timesheet
         </Link>
+        <Link
+          href="/timesheet/weekly"
+          className="rounded-lg bg-gray-300 px-3 py-1.5 text-xs font-medium text-gray-800 transition-colors hover:bg-gray-400"
+        >
+          Weekly Timesheet
+        </Link>
         <form action={logout}>
           <button className="rounded-lg bg-gray-300 px-3 py-1.5 text-xs font-medium text-gray-800 transition-colors hover:bg-gray-400">
             Sign out

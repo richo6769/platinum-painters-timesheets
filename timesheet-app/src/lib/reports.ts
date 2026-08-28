@@ -11,6 +11,7 @@ export type ReportFilters = {
 
 export type ReportEntry = {
   id: string
+  site_id: string
   user_name: string
   site_name: string
   customer_name: string
@@ -29,6 +30,7 @@ export type ReportEntry = {
 type RawRow = {
   id: string
   user_id: string
+  site_id: string
   clock_in_at: string
   clock_out_at: string | null
   break_minutes: number
@@ -62,7 +64,7 @@ export async function getReportEntries(
   let query = supabase
     .from('timesheet_entries')
     .select(
-      'id, user_id, clock_in_at, clock_out_at, break_minutes, notes, clock_in_lat, clock_in_lng, clock_out_lat, clock_out_lng, clock_in_device_id, clock_in_device_label, clock_out_device_id, clock_out_device_label, profiles(full_name), sites(name, customers(name))'
+      'id, user_id, site_id, clock_in_at, clock_out_at, break_minutes, notes, clock_in_lat, clock_in_lng, clock_out_lat, clock_out_lng, clock_in_device_id, clock_in_device_label, clock_out_device_id, clock_out_device_label, profiles(full_name), sites(name, customers(name))'
     )
     .order('clock_in_at', { ascending: false })
 
@@ -97,6 +99,7 @@ export async function getReportEntries(
 
     return {
       id: row.id,
+      site_id: row.site_id,
       user_name: profile?.full_name ?? 'Unknown',
       site_name: site?.name ?? 'Unknown',
       customer_name: customer?.name ?? '',

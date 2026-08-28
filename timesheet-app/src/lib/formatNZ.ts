@@ -15,6 +15,26 @@ export function formatNZDateTime(iso: string): string {
   })
 }
 
+// YYYY-MM-DD for the given instant, using NZ's calendar date (not the
+// server's, which runs in UTC and can be a day off around midnight NZ time).
+export function nzDateKey(iso: string): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE }).format(new Date(iso))
+}
+
+export function nzTodayDateString(): string {
+  return nzDateKey(new Date().toISOString())
+}
+
+// HH:mm (24h) in NZ time, for pre-filling <input type="time"> editors.
+export function nzTimeString(iso: string): string {
+  return new Date(iso).toLocaleTimeString('en-GB', {
+    timeZone: TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
 // For contexts (like the PDF) that want a month name instead of dd/mm/yyyy.
 export function formatNZDateTimeLong(iso: string): string {
   return new Date(iso).toLocaleString('en-NZ', {

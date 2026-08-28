@@ -11,9 +11,14 @@ export default async function TimesheetPage() {
     <div className="mx-auto max-w-3xl space-y-4 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">My Timesheet</h1>
-        <Link href="/clock" className="text-sm underline">
-          Back to Clock In/Out
-        </Link>
+        <div className="flex gap-3 text-sm">
+          <Link href="/timesheet/weekly" className="underline">
+            Weekly Timesheet
+          </Link>
+          <Link href="/clock" className="underline">
+            Back to Clock In/Out
+          </Link>
+        </div>
       </div>
       <TimesheetTable entries={entries} />
     </div>

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getReportEntries, type ReportEntry, type ReportFilters } from '@/lib/reports'
+import { payHoursForEntry } from '@/lib/payroll'
 
 type SupabaseClientLike = Awaited<ReturnType<typeof createClient>>
 
@@ -150,5 +151,48 @@ export async function groupBySite(
       staffGroups: groupStaffEntries(siteEntries),
       ...totalsFor(siteEntries),
     }))
+    .sort((a, b) => a.siteName.localeCompare(b.siteName))
+}
+
+export type JobStaffPayHours = {
+  userName: string
+  hours: number
+}
+
+export type JobPayHours = {
+  siteName: string
+  staff: JobStaffPayHours[]
+  totalHours: number
+}
+
+// For payroll: hours per staff member per job, rounded to the nearest
+// payable half hour (see lib/payroll.ts), plus a total per job.
+export async function groupPayHoursBySiteAndStaff(
+  filters: ReportFilters,
+  client?: SupabaseClientLike
+): Promise<JobPayHours[]> {
+  const entries = await getReportEntries(filters, client)
+
+  const bySite = new Map<string, Map<string, number>>()
+  for (const entry of entries) {
+    const payHours = payHoursForEntry(entry)
+    if (payHours === null) continue
+
+    const staffHours = bySite.get(entry.site_name) ?? new Map<string, number>()
+    staffHours.set(entry.user_name, round2((staffHours.get(entry.user_name) ?? 0) + payHours))
+    bySite.set(entry.site_name, staffHours)
+  }
+
+  return Array.from(bySite.entries())
+    .map(([siteName, staffHours]) => {
+      const staff = Array.from(staffHours.entries())
+        .map(([userName, hours]) => ({ userName, hours }))
+        .sort((a, b) => a.userName.localeCompare(b.userName))
+      return {
+        siteName,
+        staff,
+        totalHours: round2(staff.reduce((sum, s) => sum + s.hours, 0)),
+      }
+    })
     .sort((a, b) => a.siteName.localeCompare(b.siteName))
 }
