@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentProfile } from '@/lib/supabase/profile'
 import { getReportEntries } from '@/lib/reports'
-import { nzDateKey, nzTimeString, nzTodayDateString } from '@/lib/formatNZ'
+import { addDays, mondayOf, nzDateKey, nzTimeString, nzTodayDateString } from '@/lib/formatNZ'
 import { WeeklyTimesheetReview } from './weekly-timesheet-review'
 
 type CustomerRelation = { name: string } | { name: string }[] | null
@@ -15,20 +15,6 @@ type SiteRow = {
 
 function customerName(relation: CustomerRelation): string | undefined {
   return Array.isArray(relation) ? relation[0]?.name : relation?.name
-}
-
-function mondayOf(dateStr: string): string {
-  const d = new Date(`${dateStr}T00:00:00Z`)
-  const dow = d.getUTCDay() // 0 = Sunday .. 6 = Saturday
-  const diffToMonday = dow === 0 ? -6 : 1 - dow
-  d.setUTCDate(d.getUTCDate() + diffToMonday)
-  return d.toISOString().slice(0, 10)
-}
-
-function addDays(dateStr: string, days: number): string {
-  const d = new Date(`${dateStr}T00:00:00Z`)
-  d.setUTCDate(d.getUTCDate() + days)
-  return d.toISOString().slice(0, 10)
 }
 
 const DAY_LABELS = ['MON', 'TUE', 'WED', 'THUR', 'FRI', 'SAT', 'SUN']

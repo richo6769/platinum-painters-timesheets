@@ -25,6 +25,21 @@ export function nzTodayDateString(): string {
   return nzDateKey(new Date().toISOString())
 }
 
+// Monday of the week containing the given YYYY-MM-DD date.
+export function mondayOf(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00Z`)
+  const dow = d.getUTCDay() // 0 = Sunday .. 6 = Saturday
+  const diffToMonday = dow === 0 ? -6 : 1 - dow
+  d.setUTCDate(d.getUTCDate() + diffToMonday)
+  return d.toISOString().slice(0, 10)
+}
+
+export function addDays(dateStr: string, days: number): string {
+  const d = new Date(`${dateStr}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
 // HH:mm (24h) in NZ time, for pre-filling <input type="time"> editors.
 export function nzTimeString(iso: string): string {
   return new Date(iso).toLocaleTimeString('en-GB', {
