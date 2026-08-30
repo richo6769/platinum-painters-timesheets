@@ -2,8 +2,8 @@ import { createElement } from 'react'
 import path from 'node:path'
 import { readFile } from 'node:fs/promises'
 import type { ReactElement } from 'react'
-import { Resend } from 'resend'
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
+import { sendEmail } from '@/lib/email/mailer'
 import { TimesheetReportPdf } from '@/lib/pdf/timesheet-report-pdf'
 import type { ReportEntry } from '@/lib/reports'
 
@@ -19,10 +19,6 @@ export async function sendTimesheetConfirmationEmail(options: {
   to: string
   entries: ReportEntry[]
 }): Promise<SendConfirmationResult> {
-  if (!process.env.RESEND_API_KEY) {
-    return { sent: false, reason: 'Email sending is not configured yet.' }
-  }
-
   const netHours = options.entries.reduce((sum, e) => sum + (e.hours ?? 0), 0)
   const breakMinutes = options.entries.reduce((sum, e) => sum + e.break_minutes, 0)
 
@@ -42,11 +38,9 @@ export async function sendTimesheetConfirmationEmail(options: {
   }) as ReactElement<DocumentProps>
   const pdfBuffer = await renderToBuffer(document)
 
-  const resend = new Resend(process.env.RESEND_API_KEY)
   const recipient = process.env.WEEKLY_REPORT_EMAIL || 'nrichmond@platinumpainters.co.nz'
 
-  const { error } = await resend.emails.send({
-    from: 'Platinum Painters Timesheets <onboarding@resend.dev>',
+  return sendEmail({
     to: recipient,
     subject: `Timesheet confirmed: ${options.userName} — week ending ${options.to}`,
     text: `${options.userName} confirmed their timesheet for ${options.from} to ${options.to}.\n\nTotal hours: ${round2(netHours).toFixed(2)}`,
@@ -57,10 +51,4 @@ export async function sendTimesheetConfirmationEmail(options: {
       },
     ],
   })
-
-  if (error) {
-    return { sent: false, reason: error.message }
-  }
-
-  return { sent: true }
 }
