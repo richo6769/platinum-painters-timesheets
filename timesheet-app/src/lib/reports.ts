@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { nzDayEndUtcIso, nzDayStartUtcIso } from '@/lib/formatNZ'
 
 type SupabaseClientLike = Awaited<ReturnType<typeof createClient>>
 
@@ -68,8 +69,8 @@ export async function getReportEntries(
     )
     .order('clock_in_at', { ascending: false })
 
-  if (filters.from) query = query.gte('clock_in_at', `${filters.from}T00:00:00`)
-  if (filters.to) query = query.lte('clock_in_at', `${filters.to}T23:59:59.999`)
+  if (filters.from) query = query.gte('clock_in_at', nzDayStartUtcIso(filters.from))
+  if (filters.to) query = query.lte('clock_in_at', nzDayEndUtcIso(filters.to))
   if (filters.userId) query = query.eq('user_id', filters.userId)
   if (filters.siteId) query = query.eq('site_id', filters.siteId)
 
