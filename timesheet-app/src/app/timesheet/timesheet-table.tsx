@@ -47,7 +47,7 @@ export function TimesheetTable({ entries }: { entries: ReportEntry[] }) {
                 </tr>
                 {showDivider && i === lastCurrentWeekIndex && (
                   <tr aria-hidden="true">
-                    <td colSpan={6} className="border-t-2 border-black/30 p-0" />
+                    <td colSpan={6} className="border-t-4 border-black/30 p-0" />
                   </tr>
                 )}
               </Fragment>
