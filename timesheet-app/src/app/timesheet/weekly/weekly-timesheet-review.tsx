@@ -1,6 +1,7 @@
 'use client'
 
 import { Fragment, useMemo, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { confirmWeeklyTimesheet, updateTimesheetEntry } from '@/lib/actions/timesheet'
 
 type Site = { id: string; label: string }
@@ -131,6 +132,7 @@ export function WeeklyTimesheetReview({
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [pending, startTransition] = useTransition()
+  const router = useRouter()
 
   function updateEdit(id: string, patch: Partial<EditState>) {
     setSuccess('')
@@ -208,7 +210,8 @@ export function WeeklyTimesheetReview({
         setError(result.error)
         return
       }
-      setSuccess('Confirmed — sent to the office.')
+      setSuccess('Confirmed — sent to the Platinum office.')
+      setTimeout(() => router.push('/clock'), 1500)
     })
   }
 
