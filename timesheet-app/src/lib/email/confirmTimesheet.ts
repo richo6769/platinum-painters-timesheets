@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import type { ReactElement } from 'react'
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { sendEmail } from '@/lib/email/mailer'
+import { applyPayRounding } from '@/lib/payroll'
 import { TimesheetReportPdf } from '@/lib/pdf/timesheet-report-pdf'
 import type { ReportEntry } from '@/lib/reports'
 
@@ -19,15 +20,16 @@ export async function sendTimesheetConfirmationEmail(options: {
   to: string
   entries: ReportEntry[]
 }): Promise<SendConfirmationResult> {
-  const netHours = options.entries.reduce((sum, e) => sum + (e.hours ?? 0), 0)
-  const breakMinutes = options.entries.reduce((sum, e) => sum + e.break_minutes, 0)
+  const roundedEntries = options.entries.map(applyPayRounding)
+  const netHours = roundedEntries.reduce((sum, e) => sum + (e.hours ?? 0), 0)
+  const breakMinutes = roundedEntries.reduce((sum, e) => sum + e.break_minutes, 0)
 
   const logoBuffer = await readFile(path.join(process.cwd(), 'public', 'logo.png'))
   const document = createElement(TimesheetReportPdf, {
     staffGroups: [
       {
         userName: options.userName,
-        entries: options.entries,
+        entries: roundedEntries,
         grossHours: round2(netHours + breakMinutes / 60),
         breakMinutes,
         netHours: round2(netHours),
@@ -35,6 +37,7 @@ export async function sendTimesheetConfirmationEmail(options: {
     ],
     dateRangeLabel: `${options.from} to ${options.to}`,
     logoSrc: { data: logoBuffer, format: 'png' as const },
+    basic: true,
   }) as ReactElement<DocumentProps>
   const pdfBuffer = await renderToBuffer(document)
 

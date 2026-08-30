@@ -1,3 +1,5 @@
+import type { ReportEntry } from '@/lib/reports'
+
 // Payroll is only ever paid in half-hour blocks. Punches are rounded in the
 // business's favour: a clock-in rounds forward to the next half hour, a
 // clock-out rounds back to the previous half hour. This never touches the
@@ -25,4 +27,18 @@ export function payHoursForEntry(entry: {
   const hours = (end - start) / 3600000 - entry.break_minutes / 60
 
   return Math.max(0, Math.round(hours * 100) / 100)
+}
+
+// For display on a payroll-facing report: punches shown rounded to the
+// payable half hour, and the hours total to match. Leaves an open shift
+// (no clock-out yet) untouched.
+export function applyPayRounding(entry: ReportEntry): ReportEntry {
+  if (!entry.clock_out_at) return entry
+
+  return {
+    ...entry,
+    clock_in_at: new Date(roundClockInForPay(entry.clock_in_at)).toISOString(),
+    clock_out_at: new Date(roundClockOutForPay(entry.clock_out_at)).toISOString(),
+    hours: payHoursForEntry(entry),
+  }
 }
