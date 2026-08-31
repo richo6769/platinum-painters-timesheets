@@ -89,7 +89,7 @@ export default async function WeeklyTimesheetPage({
         </Link>
       </div>
 
-      <WeeklyTimesheetReview days={days} sites={sites} from={from} to={to} />
+      <WeeklyTimesheetReview key={from} days={days} sites={sites} from={from} to={to} />
     </div>
   )
 }
