@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getReportEntries, type ReportEntry, type ReportFilters } from '@/lib/reports'
-import { payHoursForEntry } from '@/lib/payroll'
+import { applyPayRounding } from '@/lib/payroll'
 
 type SupabaseClientLike = Awaited<ReturnType<typeof createClient>>
 
@@ -172,14 +172,14 @@ export async function groupPayHoursBySiteAndStaff(
   client?: SupabaseClientLike
 ): Promise<JobPayHours[]> {
   const entries = await getReportEntries(filters, client)
+  const { entries: rounded } = applyPayRounding(entries)
 
   const bySite = new Map<string, Map<string, number>>()
-  for (const entry of entries) {
-    const payHours = payHoursForEntry(entry)
-    if (payHours === null) continue
+  for (const entry of rounded) {
+    if (entry.hours === null) continue
 
     const staffHours = bySite.get(entry.site_name) ?? new Map<string, number>()
-    staffHours.set(entry.user_name, round2((staffHours.get(entry.user_name) ?? 0) + payHours))
+    staffHours.set(entry.user_name, round2((staffHours.get(entry.user_name) ?? 0) + entry.hours))
     bySite.set(entry.site_name, staffHours)
   }
 

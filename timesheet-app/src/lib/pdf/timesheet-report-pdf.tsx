@@ -33,6 +33,8 @@ const styles = StyleSheet.create({
   headerCell: { fontSize: 8, fontWeight: 'bold', paddingRight: 4 },
   link: { fontSize: 8, color: '#1a56db', textDecoration: 'none' },
   pageNumber: { position: 'absolute', bottom: 16, right: 24, fontSize: 8, color: '#999999' },
+  checkNote: { backgroundColor: '#fff3cd', padding: 6, marginBottom: 8 },
+  checkNoteText: { fontSize: 9, color: '#856404' },
 })
 
 const COLS = {
@@ -64,11 +66,16 @@ export function TimesheetReportPdf({
   dateRangeLabel,
   logoSrc,
   basic = false,
+  flaggedDates = [],
 }: {
   staffGroups: StaffGroup[]
   dateRangeLabel: string
   logoSrc: { data: Buffer; format: 'png' }
   basic?: boolean
+  // Dates (already formatted for display) where a staff member visited more
+  // than one site - the day total was rounded to the nearest half hour to
+  // stay payable, so it's worth a human double-checking that day.
+  flaggedDates?: string[]
 }) {
   const cols = basic ? BASIC_COLS : COLS
   return (
@@ -82,6 +89,14 @@ export function TimesheetReportPdf({
             <Text style={styles.subtitle}>{dateRangeLabel}</Text>
           </View>
         </View>
+
+        {flaggedDates.length > 0 && (
+          <View style={styles.checkNote}>
+            <Text style={styles.checkNoteText}>
+              Please check hours for: {flaggedDates.join(', ')} (multiple site visits that day).
+            </Text>
+          </View>
+        )}
 
         {staffGroups.length === 0 && <Text>No entries match these filters.</Text>}
 
