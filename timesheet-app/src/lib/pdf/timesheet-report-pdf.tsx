@@ -33,6 +33,8 @@ const styles = StyleSheet.create({
   headerCell: { fontSize: 8, fontWeight: 'bold', paddingRight: 4 },
   link: { fontSize: 8, color: '#1a56db', textDecoration: 'none' },
   pageNumber: { position: 'absolute', bottom: 16, right: 24, fontSize: 8, color: '#999999' },
+  checkNote: { backgroundColor: '#fff3cd', padding: 6, marginBottom: 8 },
+  checkNoteText: { fontSize: 9, color: '#856404' },
 })
 
 const COLS = {
@@ -47,17 +49,35 @@ const COLS = {
   net: '8%',
 }
 
+const BASIC_COLS = {
+  start: '18%',
+  end: '18%',
+  site: '22%',
+  notes: '20%',
+  gross: '8%',
+  breaks: '6%',
+  net: '8%',
+}
+
 const formatDateTime = formatNZDateTimeLong
 
 export function TimesheetReportPdf({
   staffGroups,
   dateRangeLabel,
   logoSrc,
+  basic = false,
+  flaggedDates = [],
 }: {
   staffGroups: StaffGroup[]
   dateRangeLabel: string
   logoSrc: { data: Buffer; format: 'png' }
+  basic?: boolean
+  // Dates (already formatted for display) where a staff member visited more
+  // than one site - the day total was rounded to the nearest half hour to
+  // stay payable, so it's worth a human double-checking that day.
+  flaggedDates?: string[]
 }) {
+  const cols = basic ? BASIC_COLS : COLS
   return (
     <Document>
       <Page size="A4" style={styles.page} wrap>
@@ -69,6 +89,14 @@ export function TimesheetReportPdf({
             <Text style={styles.subtitle}>{dateRangeLabel}</Text>
           </View>
         </View>
+
+        {flaggedDates.length > 0 && (
+          <View style={styles.checkNote}>
+            <Text style={styles.checkNoteText}>
+              Please check hours for: {flaggedDates.join(', ')} (multiple site visits that day).
+            </Text>
+          </View>
+        )}
 
         {staffGroups.length === 0 && <Text>No entries match these filters.</Text>}
 
@@ -83,48 +111,54 @@ export function TimesheetReportPdf({
             </View>
 
             <View style={styles.tableHeaderRow}>
-              <Text style={[styles.headerCell, { width: COLS.start }]}>Start</Text>
-              <Text style={[styles.headerCell, { width: COLS.end }]}>End</Text>
-              <Text style={[styles.headerCell, { width: COLS.site }]}>Site</Text>
-              <Text style={[styles.headerCell, { width: COLS.notes }]}>Notes</Text>
-              <Text style={[styles.headerCell, { width: COLS.startGeo }]}>Start Geo</Text>
-              <Text style={[styles.headerCell, { width: COLS.endGeo }]}>End Geo</Text>
-              <Text style={[styles.headerCell, { width: COLS.gross }]}>Gross</Text>
-              <Text style={[styles.headerCell, { width: COLS.breaks }]}>Break</Text>
-              <Text style={[styles.headerCell, { width: COLS.net }]}>Net</Text>
+              <Text style={[styles.headerCell, { width: cols.start }]}>Start</Text>
+              <Text style={[styles.headerCell, { width: cols.end }]}>End</Text>
+              <Text style={[styles.headerCell, { width: cols.site }]}>Site</Text>
+              <Text style={[styles.headerCell, { width: cols.notes }]}>Notes</Text>
+              {!basic && (
+                <>
+                  <Text style={[styles.headerCell, { width: COLS.startGeo }]}>Start Geo</Text>
+                  <Text style={[styles.headerCell, { width: COLS.endGeo }]}>End Geo</Text>
+                </>
+              )}
+              <Text style={[styles.headerCell, { width: cols.gross }]}>Gross</Text>
+              <Text style={[styles.headerCell, { width: cols.breaks }]}>Break</Text>
+              <Text style={[styles.headerCell, { width: cols.net }]}>Net</Text>
             </View>
 
             {group.entries.map((entry) => {
               const gross = (entry.hours ?? 0) + entry.break_minutes / 60
               return (
                 <View key={entry.id} style={styles.tableRow} wrap={false}>
-                  <Text style={[styles.cell, { width: COLS.start }]}>
+                  <Text style={[styles.cell, { width: cols.start }]}>
                     {formatDateTime(entry.clock_in_at)}
                   </Text>
-                  <Text style={[styles.cell, { width: COLS.end }]}>
+                  <Text style={[styles.cell, { width: cols.end }]}>
                     {entry.clock_out_at ? formatDateTime(entry.clock_out_at) : '-'}
                   </Text>
-                  <Text style={[styles.cell, { width: COLS.site }]}>{entry.site_name}</Text>
-                  <Text style={[styles.cell, { width: COLS.notes }]}>{entry.notes ?? '-'}</Text>
-                  {entry.clock_in_map_url ? (
-                    <Link src={entry.clock_in_map_url} style={[styles.link, { width: COLS.startGeo }]}>
-                      Map
-                    </Link>
-                  ) : (
-                    <Text style={[styles.cell, { width: COLS.startGeo }]}>-</Text>
-                  )}
-                  {entry.clock_out_map_url ? (
-                    <Link src={entry.clock_out_map_url} style={[styles.link, { width: COLS.endGeo }]}>
-                      Map
-                    </Link>
-                  ) : (
-                    <Text style={[styles.cell, { width: COLS.endGeo }]}>-</Text>
-                  )}
-                  <Text style={[styles.cell, { width: COLS.gross }]}>{gross.toFixed(2)}</Text>
-                  <Text style={[styles.cell, { width: COLS.breaks }]}>
+                  <Text style={[styles.cell, { width: cols.site }]}>{entry.site_name}</Text>
+                  <Text style={[styles.cell, { width: cols.notes }]}>{entry.notes ?? '-'}</Text>
+                  {!basic &&
+                    (entry.clock_in_map_url ? (
+                      <Link src={entry.clock_in_map_url} style={[styles.link, { width: COLS.startGeo }]}>
+                        Map
+                      </Link>
+                    ) : (
+                      <Text style={[styles.cell, { width: COLS.startGeo }]}>-</Text>
+                    ))}
+                  {!basic &&
+                    (entry.clock_out_map_url ? (
+                      <Link src={entry.clock_out_map_url} style={[styles.link, { width: COLS.endGeo }]}>
+                        Map
+                      </Link>
+                    ) : (
+                      <Text style={[styles.cell, { width: COLS.endGeo }]}>-</Text>
+                    ))}
+                  <Text style={[styles.cell, { width: cols.gross }]}>{gross.toFixed(2)}</Text>
+                  <Text style={[styles.cell, { width: cols.breaks }]}>
                     {entry.break_minutes > 0 ? `${entry.break_minutes}m` : '-'}
                   </Text>
-                  <Text style={[styles.cell, { width: COLS.net }]}>
+                  <Text style={[styles.cell, { width: cols.net }]}>
                     {entry.hours !== null ? entry.hours.toFixed(2) : '-'}
                   </Text>
                 </View>

@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { Fragment, useMemo, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { confirmWeeklyTimesheet, updateTimesheetEntry } from '@/lib/actions/timesheet'
 
 type Site = { id: string; label: string }
@@ -69,6 +70,31 @@ function rowHours(dateStr: string, state: EditState): number | null {
   return (finishMs - startMs) / 3600000 - breakMinutesFor(state) / 60
 }
 
+function dayJobTotals(
+  day: DayGroup,
+  edits: Record<string, EditState>,
+  sites: Site[]
+): { jobs: { siteId: string; label: string; hours: number }[]; dayTotal: number } {
+  const jobs: { siteId: string; label: string; hours: number }[] = []
+  let dayTotal = 0
+
+  for (const entry of day.entries) {
+    const state = edits[entry.id]
+    const hours = rowHours(day.date, state) ?? entry.hours ?? 0
+    dayTotal += hours
+
+    const label = sites.find((s) => s.id === state.siteId)?.label ?? entry.siteName
+    const existing = jobs.find((j) => j.siteId === state.siteId)
+    if (existing) {
+      existing.hours += hours
+    } else {
+      jobs.push({ siteId: state.siteId, label, hours })
+    }
+  }
+
+  return { jobs, dayTotal }
+}
+
 function formatDayDate(iso: string) {
   const [y, m, d] = iso.split('-').map(Number)
   return new Date(y, m - 1, d).toLocaleDateString('en-NZ', { day: '2-digit', month: 'short' })
@@ -106,6 +132,7 @@ export function WeeklyTimesheetReview({
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [pending, startTransition] = useTransition()
+  const router = useRouter()
 
   function updateEdit(id: string, patch: Partial<EditState>) {
     setSuccess('')
@@ -183,7 +210,8 @@ export function WeeklyTimesheetReview({
         setError(result.error)
         return
       }
-      setSuccess('Confirmed — sent to the office.')
+      setSuccess('Confirmed — sent to the Platinum office.')
+      setTimeout(() => router.push('/clock'), 1500)
     })
   }
 
@@ -217,7 +245,8 @@ export function WeeklyTimesheetReview({
                     </td>
                   </tr>
                 ) : (
-                  day.entries.map((entry, idx) => {
+                  <Fragment key={day.date}>
+                    {day.entries.map((entry, idx) => {
                     const state = edits[entry.id]
                     const hours = rowHours(day.date, state)
                     return (
@@ -300,7 +329,22 @@ export function WeeklyTimesheetReview({
                         </td>
                       </tr>
                     )
-                  })
+                    })}
+                    {(() => {
+                      const { jobs, dayTotal } = dayJobTotals(day, edits, sites)
+                      return (
+                        <tr className="bg-black/[0.03] text-xs text-black/70">
+                          <td className="p-3 align-top"></td>
+                          <td className="p-3 align-top" colSpan={4}>
+                            {jobs.map((j) => `${j.label}: ${j.hours.toFixed(2)}h`).join(' · ')}
+                          </td>
+                          <td className="p-3 align-top font-medium tabular-nums">
+                            {dayTotal.toFixed(2)}
+                          </td>
+                        </tr>
+                      )
+                    })()}
+                  </Fragment>
                 )
               )}
             </tbody>

@@ -2,9 +2,9 @@ import { createElement } from 'react'
 import path from 'node:path'
 import { readFile } from 'node:fs/promises'
 import type { ReactElement } from 'react'
-import { Resend } from 'resend'
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendEmail } from '@/lib/email/mailer'
 import { groupByStaff } from '@/lib/reportGroups'
 import { TimesheetReportPdf } from '@/lib/pdf/timesheet-report-pdf'
 
@@ -49,10 +49,6 @@ export async function sendWeeklyReportEmail(options?: {
     return { sent: false, reason: 'Weekly report is turned off.' }
   }
 
-  if (!process.env.RESEND_API_KEY) {
-    return { sent: false, reason: 'RESEND_API_KEY is not configured.' }
-  }
-
   const supabase = createAdminClient()
   const { from, to } = getPreviousWeekRange()
   const staffGroups = await groupByStaff({ from, to }, supabase)
@@ -65,11 +61,9 @@ export async function sendWeeklyReportEmail(options?: {
   }) as ReactElement<DocumentProps>
   const pdfBuffer = await renderToBuffer(document)
 
-  const resend = new Resend(process.env.RESEND_API_KEY)
   const recipient = process.env.WEEKLY_REPORT_EMAIL || 'nrichmond@platinumpainters.co.nz'
 
-  const { error } = await resend.emails.send({
-    from: 'Platinum Painters Timesheets <onboarding@resend.dev>',
+  return sendEmail({
     to: recipient,
     subject: `Weekly timesheet report: ${from} to ${to}`,
     text: `Attached is the timesheet report for ${from} to ${to}.`,
@@ -80,10 +74,4 @@ export async function sendWeeklyReportEmail(options?: {
       },
     ],
   })
-
-  if (error) {
-    return { sent: false, reason: error.message }
-  }
-
-  return { sent: true }
 }
