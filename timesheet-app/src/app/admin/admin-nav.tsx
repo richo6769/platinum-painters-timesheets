@@ -13,6 +13,7 @@ const links = [
   { href: '/admin/reports/by-job', label: 'Hours by Job', adminOnly: true },
   { href: '/admin/customers', label: 'Customers' },
   { href: '/admin/sites', label: 'Sites' },
+  { href: '/admin/ladders', label: 'Ladder Register' },
   { href: '/admin/staff', label: 'Staff' },
   { href: '/admin/leave', label: 'Leave' },
   { href: '/admin/staff-types', label: 'Manage Staff Types', adminOnly: true },
