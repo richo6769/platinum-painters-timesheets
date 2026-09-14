@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAdmin, requireAdminOrSupervisor } from '@/lib/authGuards'
 import {
   SITE_DOCUMENT_COLUMN,
@@ -79,10 +80,31 @@ export async function createSite(formData: FormData) {
     if (safetyPlan instanceof File) {
       await uploadSiteDocument(supabase, site.id, 'safety-plan', safetyPlan)
     }
+
+    await createLinkedJobForSite(site.id, name.trim())
   }
 
   revalidatePath('/admin/sites')
   revalidatePath('/admin/customers/[id]', 'page')
+}
+
+// Every site needs a matching Hub job (Jobs tables are admin-only RLS, so
+// this needs the service-role client regardless of whether the caller here
+// is an admin or a supervisor). Inserted as 'won' first so the Hub's
+// existing assign_job_number() trigger fires, then flipped to
+// 'in_progress' so it's immediately clockable — see sites_jobs_link_schema.sql.
+async function createLinkedJobForSite(siteId: string, siteName: string) {
+  const admin = createAdminClient()
+
+  const { data: job, error: insertError } = await admin
+    .from('jobs')
+    .insert({ name: siteName, status: 'won' })
+    .select('id')
+    .single()
+  if (insertError || !job) return
+
+  await admin.from('jobs').update({ status: 'in_progress' }).eq('id', job.id)
+  await admin.from('sites').update({ job_id: job.id }).eq('id', siteId)
 }
 
 export async function updateSite(siteId: string, formData: FormData) {
@@ -92,6 +114,7 @@ export async function updateSite(siteId: string, formData: FormData) {
   const name = formData.get('name')
   const address = formData.get('address')
   const contact_person = formData.get('contact_person')
+  const job_id = formData.get('job_id')
   const extentOfWork = formData.get('extent_of_work')
   const safetyPlan = formData.get('safety_plan')
   const removeExtentOfWork = formData.get('remove_extent_of_work') === 'on'
@@ -111,6 +134,7 @@ export async function updateSite(siteId: string, formData: FormData) {
         typeof contact_person === 'string' && contact_person.trim()
           ? contact_person.trim()
           : null,
+      ...(typeof job_id === 'string' && job_id ? { job_id } : {}),
     })
     .eq('id', siteId)
 

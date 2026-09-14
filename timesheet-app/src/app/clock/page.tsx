@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentProfile } from '@/lib/supabase/profile'
 import { logout } from '@/lib/actions/auth'
 import { ClockWidget } from './clock-widget'
@@ -13,6 +14,7 @@ type SiteRow = {
   extent_of_work_filename: string | null
   safety_plan_filename: string | null
   customers: CustomerRelation
+  jobs: { status: string } | { status: string }[] | null
 }
 
 type OpenEntrySite = {
@@ -36,13 +38,20 @@ function customerName(relation: CustomerRelation): string | undefined {
 export default async function ClockPage() {
   const profile = await getCurrentProfile()
   const supabase = await createClient()
+  // Jobs tables are admin-only RLS in the Hub, so a painter's own session
+  // can't read job status at all — the admin client is only used here to
+  // resolve which sites are clockable, never to expose job financials.
+  const admin = createAdminClient()
 
   const [{ data: siteRows }, { data: openEntryRow }, { data: acknowledgements }, { data: extraDocRows }] =
     await Promise.all([
-      supabase
+      admin
         .from('sites')
-        .select('id, name, extent_of_work_filename, safety_plan_filename, customers(name)')
+        .select(
+          'id, name, extent_of_work_filename, safety_plan_filename, customers(name), jobs!inner(status)'
+        )
         .eq('is_active', true)
+        .eq('jobs.status', 'in_progress')
         .order('name')
         .returns<SiteRow[]>(),
       supabase

@@ -14,21 +14,25 @@ export default async function EditSitePage({
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: site }, { data: customers }, { data: extraDocs }] = await Promise.all([
-    supabase
-      .from('sites')
-      .select(
-        'id, customer_id, name, address, contact_person, extent_of_work_filename, safety_plan_filename'
-      )
-      .eq('id', id)
-      .single(),
-    supabase.from('customers').select('id, name').order('name'),
-    supabase
-      .from('site_documents')
-      .select('id, name')
-      .eq('site_id', id)
-      .order('created_at'),
-  ])
+  const [{ data: site }, { data: customers }, { data: extraDocs }, { data: jobs }] =
+    await Promise.all([
+      supabase
+        .from('sites')
+        .select(
+          'id, customer_id, name, address, contact_person, job_id, extent_of_work_filename, safety_plan_filename'
+        )
+        .eq('id', id)
+        .single(),
+      supabase.from('customers').select('id, name').order('name'),
+      supabase
+        .from('site_documents')
+        .select('id, name')
+        .eq('site_id', id)
+        .order('created_at'),
+      // Jobs is admin-only RLS in the Hub — this page is already
+      // admin-only (canEdit), so the plain session client can read it.
+      supabase.from('jobs').select('id, name, job_number').order('name'),
+    ])
 
   if (!site) {
     notFound()
@@ -91,6 +95,28 @@ export default async function EditSitePage({
               defaultValue={site.contact_person ?? ''}
               className="w-full rounded-md border border-black/20 px-3 py-2"
             />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="job_id" className="text-sm font-medium">
+              Job
+              {!site.job_id && (
+                <span className="ml-1 text-red-600">— needs linking, site won&apos;t appear at clock-in until it&apos;s set</span>
+              )}
+            </label>
+            <select
+              id="job_id"
+              name="job_id"
+              defaultValue={site.job_id ?? ''}
+              required
+              className="w-full rounded-md border border-black/20 px-3 py-2"
+            >
+              {!site.job_id && <option value="">Choose a job…</option>}
+              {(jobs ?? []).map((j) => (
+                <option key={j.id} value={j.id}>
+                  {j.job_number ? `${j.job_number} — ${j.name}` : j.name}
+                </option>
+              ))}
+            </select>
           </div>
           <SiteDocumentField
             kind="extent-of-work"
