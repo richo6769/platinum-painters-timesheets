@@ -15,6 +15,9 @@ export default async function TimesheetPage() {
           <Link href="/timesheet/weekly" className="underline">
             Weekly Timesheet
           </Link>
+          <Link href="/timesheet/requests" className="underline">
+            Request a Change
+          </Link>
           <Link href="/clock" className="underline">
             Back to Clock In/Out
           </Link>
