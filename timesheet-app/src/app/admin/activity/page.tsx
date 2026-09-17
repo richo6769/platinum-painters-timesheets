@@ -161,8 +161,12 @@ export default async function ActivityPage() {
                 id="user_id"
                 name="user_id"
                 required
+                defaultValue=""
                 className="w-full rounded-md border border-black/20 px-3 py-2"
               >
+                <option value="" disabled>
+                  Choose a staff member…
+                </option>
                 {availableStaff.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.full_name}
@@ -178,8 +182,12 @@ export default async function ActivityPage() {
                 id="site_id"
                 name="site_id"
                 required
+                defaultValue=""
                 className="w-full rounded-md border border-black/20 px-3 py-2"
               >
+                <option value="" disabled>
+                  Choose a site…
+                </option>
                 {(sites ?? []).map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}

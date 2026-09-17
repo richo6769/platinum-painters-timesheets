@@ -29,20 +29,6 @@ export async function GET(
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  // Only admins get a directly downloadable link - everyone else gets the
-  // file streamed back inline, with no saveable URL to share or copy.
-  if (profile.role === 'admin') {
-    const { data: signed, error } = await supabase.storage
-      .from('site-documents')
-      .createSignedUrl(doc.storage_path, 60)
-
-    if (error || !signed) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    }
-
-    return NextResponse.redirect(signed.signedUrl)
-  }
-
   const { data: file, error } = await supabase.storage.from('site-documents').download(doc.storage_path)
 
   if (error || !file) {
